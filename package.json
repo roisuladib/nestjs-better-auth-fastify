@@ -39,7 +39,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/roisuladib/nestjs-better-auth.git"
+		"url": "git+https://github.com/roisuladib/nestjs-better-auth-fastify.git"
 	},
 	"peerDependencies": {
 		"@nestjs/common": ">=11.1.6",
@@ -72,9 +72,9 @@
 	"simple-git-hooks": {
 		"pre-commit": "bun run lint:fix && git add ."
 	},
-	"homepage": "https://github.com/roisuladib/nestjs-better-auth#readme",
+	"homepage": "https://github.com/roisuladib/nestjs-better-auth-fastify#readme",
 	"bugs": {
-		"url": "https://github.com/roisuladib/nestjs-better-auth/issues"
+		"url": "https://github.com/roisuladib/nestjs-better-auth-fastify/issues"
 	},
 	"license": "MIT"
 }
