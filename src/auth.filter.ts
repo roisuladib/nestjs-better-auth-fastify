@@ -3,7 +3,7 @@ import type { FastifyReply } from 'fastify';
 
 import { Catch } from '@nestjs/common';
 
-import { APIError } from 'better-auth';
+import { APIError } from 'better-auth/api';
 
 @Catch(APIError)
 export class AuthFilter implements ExceptionFilter {

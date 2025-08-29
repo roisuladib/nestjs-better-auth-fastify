@@ -5,7 +5,7 @@ import type { FastifyRequest } from 'fastify';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
-import { APIError } from 'better-auth';
+import { APIError } from 'better-auth/api';
 import { fromNodeHeaders } from 'better-auth/node';
 
 import { AUTH_INSTANCE_KEY } from './auth.symbols';

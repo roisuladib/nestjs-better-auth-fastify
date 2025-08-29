@@ -1,5 +1,6 @@
 import type { CustomDecorator, ExecutionContext } from '@nestjs/common';
 import type { createAuthMiddleware } from 'better-auth/api';
+import type { FastifyRequest } from 'fastify';
 
 import { createParamDecorator, SetMetadata } from '@nestjs/common';
 
@@ -24,7 +25,7 @@ export const Optional = (): CustomDecorator<string> => SetMetadata('OPTIONAL', t
  */
 export const Session: ReturnType<typeof createParamDecorator> = createParamDecorator(
 	(_data: unknown, context: ExecutionContext): unknown => {
-		const request = context.switchToHttp().getRequest();
+		const request = context.switchToHttp().getRequest<FastifyRequest>();
 		return request.session;
 	},
 );

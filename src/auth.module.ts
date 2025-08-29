@@ -492,7 +492,7 @@ export class AuthModule implements NestModule, OnModuleInit {
 				{
 					provide: AUTH_INSTANCE_KEY,
 					useFactory: async (...args: unknown[]) => {
-						const result = await options.useFactory!(...args);
+						const result = await options.useFactory?.(...args);
 						if (!result?.auth) {
 							throw new Error('Auth factory must return an object with an "auth" property');
 						}
@@ -503,7 +503,7 @@ export class AuthModule implements NestModule, OnModuleInit {
 				{
 					provide: AUTH_MODULE_OPTIONS_KEY,
 					useFactory: async (...args: unknown[]) => {
-						const result = await options.useFactory!(...args);
+						const result = await options.useFactory?.(...args);
 						return result?.options || {};
 					},
 					inject: options.inject || [],

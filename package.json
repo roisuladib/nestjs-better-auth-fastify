@@ -1,17 +1,18 @@
 {
 	"name": "nestjs-better-auth-fastify",
-	"description": "A typescript library",
-	"version": "0.1.0",
-	"type": "module",
+	"description": "NestJS Better Auth Module for fastify adapter",
+	"version": "0.0.1",
 	"files": [
 		"dist"
 	],
-	"module": "./dist/index.js",
-	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
-			"import": "./dist/index.js",
-			"require": "./dist/index.cjs"
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.js",
+			"types": "./dist/index.d.ts"
 		}
 	},
 	"scripts": {
@@ -39,7 +40,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/roisuladib/nestjs-better-auth.git"
+		"url": "git+https://github.com/roisuladib/nestjs-better-auth-fastify.git"
 	},
 	"peerDependencies": {
 		"@nestjs/common": ">=11.1.6",
@@ -72,9 +73,9 @@
 	"simple-git-hooks": {
 		"pre-commit": "bun run lint:fix && git add ."
 	},
-	"homepage": "https://github.com/roisuladib/nestjs-better-auth#readme",
+	"homepage": "https://github.com/roisuladib/nestjs-better-auth-fastify#readme",
 	"bugs": {
-		"url": "https://github.com/roisuladib/nestjs-better-auth/issues"
+		"url": "https://github.com/roisuladib/nestjs-better-auth-fastify/issues"
 	},
 	"license": "MIT"
 }
