@@ -83,8 +83,37 @@ const HOOKS = [
 ];
 
 /**
- * NestJS module that integrates the Auth library with NestJS applications.
- * Provides authentication middleware, hooks, and exception handling.
+ * NestJS module that integrates Better Auth with NestJS/Fastify applications.
+ *
+ * @class AuthModule
+ * @implements {NestModule}
+ * @implements {OnModuleInit}
+ *
+ * @description
+ * This module provides:
+ * - Authentication middleware for Better Auth integration
+ * - Automatic CORS configuration based on trustedOrigins
+ * - Hook system for before/after auth operations
+ * - Global exception handling for auth errors
+ * - Session management and guards
+ *
+ * @example
+ * ```typescript
+ * // Static configuration
+ * AuthModule.forRoot(auth, {
+ *   disableExceptionFilter: false,
+ *   disableTrustedOriginsCors: false
+ * })
+ *
+ * // Async configuration
+ * AuthModule.forRootAsync({
+ *   useFactory: async () => ({
+ *     auth: betterAuth(config),
+ *     options: { disableExceptionFilter: false }
+ *   }),
+ *   inject: [ConfigService]
+ * })
+ * ```
  */
 @Module({
 	imports: [DiscoveryModule],
@@ -115,7 +144,12 @@ export class AuthModule implements NestModule, OnModuleInit {
 	}
 
 	/**
-	 * Setup Better Auth hooks from decorated providers
+	 * Setup Better Auth hooks from decorated providers.
+	 * Scans for providers decorated with @Hook and registers their
+	 * @BeforeHook and @AfterHook methods with Better Auth.
+	 *
+	 * @private
+	 * @returns {void}
 	 */
 	private setupHooks(): void {
 		if (!this.auth.options.hooks) {
@@ -183,8 +217,15 @@ export class AuthModule implements NestModule, OnModuleInit {
 	}
 
 	/**
-	 * Setup CORS configuration based on Better Auth trustedOrigins
-	 * Handles all trustedOrigins types: undefined, string[], function
+	 * Setup CORS configuration based on Better Auth trustedOrigins.
+	 * Supports three modes:
+	 * - undefined: No CORS configuration
+	 * - string[]: Static list of allowed origins (best performance)
+	 * - function: Dynamic origin validation (flexible but slower)
+	 *
+	 * @private
+	 * @throws {Error} If trustedOrigins configuration is invalid
+	 * @returns {void}
 	 */
 	private setupCors(): void {
 		const trustedOrigins = this.auth.options.trustedOrigins;
@@ -392,8 +433,25 @@ export class AuthModule implements NestModule, OnModuleInit {
 
 	/**
 	 * Static factory method to create and configure the AuthModule.
-	 * @param auth - The Auth instance to use
-	 * @param options - Configuration options for the module
+	 *
+	 * @static
+	 * @param {Auth} auth - The Better Auth instance to use
+	 * @param {AuthModuleOptions} [options={}] - Configuration options for the module
+	 * @returns {DynamicModule} Configured NestJS dynamic module
+	 *
+	 * @example
+	 * ```typescript
+	 * import { auth } from './auth.config';
+	 *
+	 * @Module({
+	 *   imports: [
+	 *     AuthModule.forRoot(auth, {
+	 *       disableExceptionFilter: false
+	 *     })
+	 *   ]
+	 * })
+	 * export class AppModule {}
+	 * ```
 	 */
 	static forRoot(auth: Auth, options: AuthModuleOptions = {}): DynamicModule {
 		// Initialize hooks with an empty object if undefined
@@ -427,7 +485,30 @@ export class AuthModule implements NestModule, OnModuleInit {
 
 	/**
 	 * Static factory method to create and configure the AuthModule asynchronously.
-	 * @param options - Async configuration options for the module
+	 * Supports three configuration methods: useFactory, useClass, and useExisting.
+	 *
+	 * @static
+	 * @param {AuthModuleAsyncOptions} options - Async configuration options
+	 * @returns {DynamicModule} Configured NestJS dynamic module
+	 * @throws {Error} If no configuration method or multiple methods are provided
+	 *
+	 * @example
+	 * ```typescript
+	 * // Using factory
+	 * AuthModule.forRootAsync({
+	 *   imports: [ConfigModule],
+	 *   useFactory: async (config: ConfigService) => ({
+	 *     auth: betterAuth(config.get('auth')),
+	 *     options: { disableExceptionFilter: false }
+	 *   }),
+	 *   inject: [ConfigService]
+	 * })
+	 *
+	 * // Using class
+	 * AuthModule.forRootAsync({
+	 *   useClass: AuthConfigService
+	 * })
+	 * ```
 	 */
 	static forRootAsync(options: AuthModuleAsyncOptions): DynamicModule {
 		AuthModule.validateAsyncOptions(options);
