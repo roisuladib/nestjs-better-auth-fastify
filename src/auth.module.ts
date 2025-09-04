@@ -32,7 +32,7 @@ import {
 	HOOK_KEY,
 } from './auth.symbols';
 
-type BetterAuthInstance = ReturnType<typeof betterAuth>;
+export type BetterAuthInstance = ReturnType<typeof betterAuth>;
 
 /**
  * Configuration options for the AuthModule
@@ -45,7 +45,7 @@ export type AuthModuleOptions = {
 /**
  * Return type for auth configuration factory
  */
-export type AuthFactoryResult<T extends BetterAuthInstance> = {
+export type AuthFactoryResult<T extends BetterAuthInstance = BetterAuthInstance> = {
 	auth: T;
 	options?: AuthModuleOptions;
 };
@@ -54,9 +54,7 @@ export type AuthFactoryResult<T extends BetterAuthInstance> = {
  * Configuration provider interface for auth module
  */
 export interface AuthConfigProvider {
-	createAuthOptions():
-		| AuthFactoryResult<BetterAuthInstance>
-		| Promise<AuthFactoryResult<BetterAuthInstance>>;
+	createAuthOptions(): AuthFactoryResult | Promise<AuthFactoryResult>;
 }
 
 /**
@@ -66,9 +64,7 @@ export interface AuthModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> 
 	/**
 	 * Factory function that returns an object with auth instance and optional module options
 	 */
-	useFactory?: (
-		...args: unknown[]
-	) => AuthFactoryResult<BetterAuthInstance> | Promise<AuthFactoryResult<BetterAuthInstance>>;
+	useFactory?: (...args: unknown[]) => AuthFactoryResult | Promise<AuthFactoryResult>;
 	/**
 	 * Providers to inject into the factory function
 	 */
