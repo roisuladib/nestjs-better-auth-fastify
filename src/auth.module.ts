@@ -8,7 +8,7 @@ import type {
 	Type,
 } from '@nestjs/common';
 import type { FastifyAdapter } from '@nestjs/platform-fastify';
-import type { Auth } from 'better-auth';
+import type { Auth, betterAuth } from 'better-auth';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 import { HttpStatus, Inject, Logger, Module } from '@nestjs/common';
@@ -32,6 +32,8 @@ import {
 	HOOK_KEY,
 } from './auth.symbols';
 
+type BetterAuthInstance = ReturnType<typeof betterAuth>;
+
 /**
  * Configuration options for the AuthModule
  */
@@ -43,7 +45,7 @@ export type AuthModuleOptions = {
 /**
  * Return type for auth configuration factory
  */
-export type AuthFactoryResult<T extends Auth> = {
+export type AuthFactoryResult<T extends BetterAuthInstance> = {
 	auth: T;
 	options?: AuthModuleOptions;
 };
@@ -52,7 +54,9 @@ export type AuthFactoryResult<T extends Auth> = {
  * Configuration provider interface for auth module
  */
 export interface AuthConfigProvider {
-	createAuthOptions(): AuthFactoryResult<Auth> | Promise<AuthFactoryResult<Auth>>;
+	createAuthOptions():
+		| AuthFactoryResult<BetterAuthInstance>
+		| Promise<AuthFactoryResult<BetterAuthInstance>>;
 }
 
 /**
@@ -62,7 +66,9 @@ export interface AuthModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> 
 	/**
 	 * Factory function that returns an object with auth instance and optional module options
 	 */
-	useFactory?: (...args: unknown[]) => AuthFactoryResult<Auth> | Promise<AuthFactoryResult<Auth>>;
+	useFactory?: (
+		...args: unknown[]
+	) => AuthFactoryResult<BetterAuthInstance> | Promise<AuthFactoryResult<BetterAuthInstance>>;
 	/**
 	 * Providers to inject into the factory function
 	 */
@@ -453,7 +459,10 @@ export class AuthModule implements NestModule, OnModuleInit {
 	 * export class AppModule {}
 	 * ```
 	 */
-	static forRoot<T extends Auth>(auth: T, options: AuthModuleOptions = {}): DynamicModule {
+	static forRoot<T extends BetterAuthInstance>(
+		auth: T,
+		options: AuthModuleOptions = {},
+	): DynamicModule {
 		// Initialize hooks with an empty object if undefined
 		// Without this initialization, the setupHook method won't be able to properly override hooks
 		// It won't throw an error, but any hook functions we try to add won't be called
@@ -557,7 +566,7 @@ export class AuthModule implements NestModule, OnModuleInit {
 	/**
 	 * Initializes auth instance hooks to ensure proper hook registration
 	 */
-	private static initializeAuthHooks<T extends Auth>(auth: T): T {
+	private static initializeAuthHooks<T extends BetterAuthInstance>(auth: T): T {
 		if (!auth.options) {
 			auth.options = {};
 		}
