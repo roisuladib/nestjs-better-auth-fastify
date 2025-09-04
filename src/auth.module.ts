@@ -35,7 +35,7 @@ import {
 /**
  * Configuration options for the AuthModule
  */
-type AuthModuleOptions = {
+export type AuthModuleOptions = {
 	disableExceptionFilter?: boolean;
 	disableTrustedOriginsCors?: boolean;
 };
@@ -43,16 +43,16 @@ type AuthModuleOptions = {
 /**
  * Return type for auth configuration factory
  */
-type AuthFactoryResult = {
-	auth: Auth;
+export type AuthFactoryResult<T extends Auth> = {
+	auth: T;
 	options?: AuthModuleOptions;
 };
 
 /**
  * Configuration provider interface for auth module
  */
-interface AuthConfigProvider {
-	createAuthOptions(): AuthFactoryResult | Promise<AuthFactoryResult>;
+export interface AuthConfigProvider {
+	createAuthOptions(): AuthFactoryResult<Auth> | Promise<AuthFactoryResult<Auth>>;
 }
 
 /**
@@ -62,7 +62,7 @@ export interface AuthModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> 
 	/**
 	 * Factory function that returns an object with auth instance and optional module options
 	 */
-	useFactory?: (...args: unknown[]) => AuthFactoryResult | Promise<AuthFactoryResult>;
+	useFactory?: (...args: unknown[]) => AuthFactoryResult<Auth> | Promise<AuthFactoryResult<Auth>>;
 	/**
 	 * Providers to inject into the factory function
 	 */
@@ -453,7 +453,7 @@ export class AuthModule implements NestModule, OnModuleInit {
 	 * export class AppModule {}
 	 * ```
 	 */
-	static forRoot(auth: Auth, options: AuthModuleOptions = {}): DynamicModule {
+	static forRoot<T extends Auth>(auth: T, options: AuthModuleOptions = {}): DynamicModule {
 		// Initialize hooks with an empty object if undefined
 		// Without this initialization, the setupHook method won't be able to properly override hooks
 		// It won't throw an error, but any hook functions we try to add won't be called
@@ -557,7 +557,7 @@ export class AuthModule implements NestModule, OnModuleInit {
 	/**
 	 * Initializes auth instance hooks to ensure proper hook registration
 	 */
-	private static initializeAuthHooks(auth: Auth): Auth {
+	private static initializeAuthHooks<T extends Auth>(auth: T): T {
 		if (!auth.options) {
 			auth.options = {};
 		}
