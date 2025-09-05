@@ -1,15 +1,18 @@
 import type {
 	DynamicModule,
 	MiddlewareConsumer,
-	ModuleMetadata,
 	NestModule,
 	OnModuleInit,
 	Provider,
-	Type,
 } from '@nestjs/common';
 import type { FastifyAdapter } from '@nestjs/platform-fastify';
-import type { Auth, betterAuth } from 'better-auth';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type {
+	AuthConfigProvider,
+	AuthInstance,
+	AuthModuleAsyncOptions,
+	AuthModuleOptions,
+} from './types';
 
 import { HttpStatus, Inject, Logger, Module } from '@nestjs/common';
 import {
@@ -31,53 +34,6 @@ import {
 	BEFORE_HOOK_KEY,
 	HOOK_KEY,
 } from './auth.symbols';
-
-export type BetterAuthInstance = ReturnType<typeof betterAuth>;
-
-/**
- * Configuration options for the AuthModule
- */
-export type AuthModuleOptions = {
-	disableExceptionFilter?: boolean;
-	disableTrustedOriginsCors?: boolean;
-};
-
-/**
- * Return type for auth configuration factory
- */
-export type AuthFactoryResult<T extends BetterAuthInstance = BetterAuthInstance> = {
-	auth: T;
-	options?: AuthModuleOptions;
-};
-
-/**
- * Configuration provider interface for auth module
- */
-export interface AuthConfigProvider {
-	createAuthOptions(): AuthFactoryResult | Promise<AuthFactoryResult>;
-}
-
-/**
- * Factory for creating Auth instance and module options asynchronously
- */
-export interface AuthModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> {
-	/**
-	 * Factory function that returns an object with auth instance and optional module options
-	 */
-	useFactory?: (...args: unknown[]) => AuthFactoryResult | Promise<AuthFactoryResult>;
-	/**
-	 * Providers to inject into the factory function
-	 */
-	inject?: (string | symbol | Type<unknown>)[];
-	/**
-	 * Use an existing provider class
-	 */
-	useClass?: Type<AuthConfigProvider>;
-	/**
-	 * Use an existing provider
-	 */
-	useExisting?: Type<AuthConfigProvider>;
-}
 
 const HOOKS = [
 	{ metadataKey: BEFORE_HOOK_KEY, hookType: 'before' as const },
@@ -125,7 +81,7 @@ export class AuthModule implements NestModule, OnModuleInit {
 
 	constructor(
 		@Inject(AUTH_INSTANCE_KEY)
-		private readonly auth: Auth,
+		private readonly auth: AuthInstance,
 		@Inject(DiscoveryService)
 		private readonly discoveryService: DiscoveryService,
 		@Inject(MetadataScanner)
@@ -455,10 +411,7 @@ export class AuthModule implements NestModule, OnModuleInit {
 	 * export class AppModule {}
 	 * ```
 	 */
-	static forRoot<T extends BetterAuthInstance>(
-		auth: T,
-		options: AuthModuleOptions = {},
-	): DynamicModule {
+	static forRoot<T extends AuthInstance>(auth: T, options: AuthModuleOptions = {}): DynamicModule {
 		// Initialize hooks with an empty object if undefined
 		// Without this initialization, the setupHook method won't be able to properly override hooks
 		// It won't throw an error, but any hook functions we try to add won't be called
@@ -562,7 +515,7 @@ export class AuthModule implements NestModule, OnModuleInit {
 	/**
 	 * Initializes auth instance hooks to ensure proper hook registration
 	 */
-	private static initializeAuthHooks<T extends BetterAuthInstance>(auth: T): T {
+	private static initializeAuthHooks<T extends AuthInstance>(auth: T): T {
 		if (!auth.options) {
 			auth.options = {};
 		}

@@ -6,6 +6,16 @@ import { createParamDecorator, SetMetadata } from '@nestjs/common';
 
 import { AFTER_HOOK_KEY, BEFORE_HOOK_KEY, HOOK_KEY } from './auth.symbols';
 
+export enum Role {
+	System = 'system',
+	User = 'user',
+	Admin = 'admin',
+}
+
+export const ROLES_KEY = 'roles' as const;
+export const Roles = (...roles: Role[]): CustomDecorator<typeof ROLES_KEY> =>
+	SetMetadata(ROLES_KEY, roles);
+
 /**
  * Marks a route or a controller as public, allowing unauthenticated access.
  * When applied, the AuthGuard will skip authentication checks.
