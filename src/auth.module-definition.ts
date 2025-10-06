@@ -22,6 +22,7 @@ const MODULE_DEFINITION = new ConfigurableModuleBuilder<AuthModuleConfig>({
 		},
 		(definition, extras) => ({
 			...definition,
+			exports: [AUTH_MODULE_OPTIONS],
 			global: extras.isGlobal,
 		}),
 	)

@@ -94,9 +94,9 @@ export type AuthSession = UserSession['session'];
  * @see {@link AuthModuleConfig} for complete configuration
  */
 export type AuthModuleFeatures = {
-	disableExceptionFilter: boolean;
-	disableGlobalAuthGuard: boolean;
-	disableTrustedOriginsCors: boolean;
+	disableExceptionFilter?: boolean;
+	disableGlobalAuthGuard?: boolean;
+	disableTrustedOriginsCors?: boolean;
 };
 
 /**
