@@ -152,8 +152,8 @@ The module uses NestJS's `ConfigurableModuleBuilder` for enhanced type safety an
 - Users define custom types using `Auth` as base for additional plugins
 
 **Plugin Type Handling**:
-- Default: `AuthService` includes openAPI plugin methods automatically
-- Custom plugins: Users must manually define type matching ALL installed plugins:
+- **Default Behavior**: `AuthService` automatically includes **openAPI plugin methods** out of the box (via `AuthWithOpenAPI` default generic)
+- **Custom plugins**: Users must manually define type matching ALL installed plugins (including openAPI):
   ```typescript
   import type { Auth } from 'better-auth';
   import type { twoFactor, phoneNumber, admin, openAPI } from 'better-auth/plugins';
@@ -161,7 +161,7 @@ The module uses NestJS's `ConfigurableModuleBuilder` for enhanced type safety an
 
   export type CustomAuth = Auth & {
     api: Auth['api']
-      & ReturnType<typeof openAPI>['endpoints']
+      & ReturnType<typeof openAPI>['endpoints']         // Include for docs generation
       & ReturnType<typeof twoFactor>['endpoints']
       & ReturnType<typeof phoneNumber>['endpoints']
       & ReturnType<typeof admin<AdminOptions>>['endpoints'];

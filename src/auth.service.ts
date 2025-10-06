@@ -10,6 +10,8 @@ import { AUTH_MODULE_OPTIONS } from './auth.symbols';
  * Bridge between NestJS DI and Better Auth with full type safety.
  * Use this to programmatically interact with authentication without decorators.
  *
+ * **Default Behavior**: AuthService automatically includes **openAPI plugin methods** out of the box.
+ *
  * **Perfect for:**
  * - Building custom auth endpoints
  * - Server-side session management
@@ -17,11 +19,11 @@ import { AUTH_MODULE_OPTIONS } from './auth.symbols';
  * - Background jobs and scripts
  * - Testing and mocking
  *
- * @template T - Better Auth instance type (default: AuthWithOpenAPI)
+ * @template T - Better Auth instance type (default: AuthWithOpenAPI with openAPI plugin)
  *
  * @example
  * ```typescript
- * // Default usage - includes openAPI plugin methods
+ * // Default usage - openAPI plugin included automatically
  * @Injectable()
  * export class UserService {
  *   constructor(private readonly authService: AuthService) {}
@@ -40,6 +42,7 @@ import { AUTH_MODULE_OPTIONS } from './auth.symbols';
  * @example
  * ```typescript
  * // Custom plugins - manual type definition required
+ * // Note: Include openAPI explicitly when defining custom types
  * import type { Auth } from 'better-auth';
  * import type { twoFactor, phoneNumber, admin, openAPI } from 'better-auth/plugins';
  * import type { AdminOptions } from 'better-auth/plugins/admin';
@@ -47,7 +50,7 @@ import { AUTH_MODULE_OPTIONS } from './auth.symbols';
  * // Define type matching ALL your plugins (in types/custom-auth.types.ts)
  * export type CustomAuth = Auth & {
  *   api: Auth['api']
- *     & ReturnType<typeof openAPI>['endpoints']
+ *     & ReturnType<typeof openAPI>['endpoints']       // Include openAPI
  *     & ReturnType<typeof twoFactor>['endpoints']
  *     & ReturnType<typeof phoneNumber>['endpoints']
  *     & ReturnType<typeof admin<AdminOptions>>['endpoints'];

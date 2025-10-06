@@ -765,9 +765,13 @@ new FastifyAdapter({
 
 ### Custom Plugins and Type Safety
 
-By default, `AuthService` includes openAPI plugin methods. For custom plugins, you must manually define types.
+**🎯 Default Behavior**: `AuthService` automatically includes **openAPI plugin methods** out of the box. No configuration needed!
 
-**Default Usage (openAPI included):**
+For additional plugins (twoFactor, phoneNumber, admin, etc.), you must manually define types.
+
+---
+
+**Default Usage (openAPI included automatically):**
 ```typescript
 @Injectable()
 export class UserService {
@@ -825,8 +829,9 @@ export class UserService {
 ```
 
 **Important Notes:**
+- ✅ **openAPI included by default** - AuthService automatically provides openAPI plugin methods
 - ⚠️ **No automatic type inference** - You must manually define types for custom plugins
-- 📝 **Include ALL plugins** - List every plugin you install (including openAPI)
+- 📝 **Include ALL plugins** - List every plugin you install (including openAPI for custom types)
 - 🎯 **Use `Auth` as base** - Don't extend `AuthWithOpenAPI` for custom types
 - 💡 **DI Limitation** - TypeScript cannot infer types from runtime Better Auth configuration
 
