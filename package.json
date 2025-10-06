@@ -28,26 +28,27 @@
 		"release": "bumpp --commit --push --tag",
 		"prepare": "bun simple-git-hooks"
 	},
-	"dependencies": {
-		"better-auth": "^1.3.26"
-	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.5",
-		"@nestjs/graphql": "^13.2.0",
+		"@nestjs/common": "^11.1.6",
+		"@nestjs/core": "^11.1.6",
+		"@nestjs/platform-fastify": "^11.1.6",
 		"@nestjs/testing": "^11.1.6",
 		"@types/bun": "^1.2.23",
-		"bumpp": "^10.2.3",
-		"bunup": "^0.14.16",
+		"bumpp": "^10.3.1",
+		"bunup": "^0.14.18",
+		"fastify": "^5.6.1",
 		"simple-git-hooks": "^2.13.1",
 		"typescript": "^5.9.3"
 	},
 	"peerDependencies": {
-		"@nestjs/common": "^11.1.6",
-		"@nestjs/core": "^11.1.6",
-		"@nestjs/graphql": "^13.2.0",
-		"@nestjs/platform-fastify": "^11.1.6",
-		"fastify": "^5.6.1",
-		"typescript": ">=4.5.0"
+		"@nestjs/common": "^11.0.0",
+		"@nestjs/core": "^11.0.0",
+		"@nestjs/graphql": "latest",
+		"@nestjs/platform-fastify": "^11.0.0",
+		"better-auth": "^1.3.26",
+		"fastify": "^5.0.0",
+		"typescript": ">=5.0.0"
 	},
 	"peerDependenciesMeta": {
 		"@nestjs/core": {
