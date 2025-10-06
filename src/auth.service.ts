@@ -1,5 +1,4 @@
-import type { Auth } from 'better-auth';
-import type { AuthModuleConfig } from './types';
+import type { AuthModuleConfig, AuthWithOpenAPI } from './types';
 
 import { Inject, Injectable } from '@nestjs/common';
 
@@ -18,11 +17,11 @@ import { AUTH_MODULE_OPTIONS } from './auth.symbols';
  * - Background jobs and scripts
  * - Testing and mocking
  *
- * @template T - Better Auth instance type with plugin support
+ * @template T - Better Auth instance type (default: AuthWithOpenAPI)
  *
  * @example
  * ```typescript
- * // Inject in any service or controller
+ * // Default usage - includes openAPI plugin methods
  * @Injectable()
  * export class UserService {
  *   constructor(private readonly authService: AuthService) {}
@@ -31,40 +30,46 @@ import { AUTH_MODULE_OPTIONS } from './auth.symbols';
  *     return this.authService.api.getSession({ headers });
  *   }
  *
- *   async forceSignOut() {
- *     // Admin action: force sign out user
- *     await this.authService.api.signOut();
+ *   async generateOpenAPISpec() {
+ *     // openAPI plugin method available by default
+ *     return this.authService.api.generateOpenAPISchema();
  *   }
  * }
  * ```
  *
  * @example
  * ```typescript
- * // Custom auth endpoint with validation
- * @Controller('auth')
- * export class CustomAuthController {
- *   constructor(private readonly authService: AuthService) {}
+ * // Custom plugins - manual type definition required
+ * import type { Auth } from 'better-auth';
+ * import type { twoFactor, phoneNumber, admin, openAPI } from 'better-auth/plugins';
+ * import type { AdminOptions } from 'better-auth/plugins/admin';
  *
- *   @Post('sign-in')
- *   async signIn(@Body() dto: SignInDto, @Req() req: FastifyRequest) {
- *     // Custom validation logic
- *     await this.validateDomain(dto.email);
+ * // Define type matching ALL your plugins (in types/custom-auth.types.ts)
+ * export type CustomAuth = Auth & {
+ *   api: Auth['api']
+ *     & ReturnType<typeof openAPI>['endpoints']
+ *     & ReturnType<typeof twoFactor>['endpoints']
+ *     & ReturnType<typeof phoneNumber>['endpoints']
+ *     & ReturnType<typeof admin<AdminOptions>>['endpoints'];
+ * };
  *
- *     // Use Better Auth API
- *     return this.authService.api.signIn.email({
- *       email: dto.email,
- *       password: dto.password,
- *       headers: req.headers
- *     });
+ * // Use custom type in services
+ * @Injectable()
+ * export class UserService {
+ *   constructor(private authService: AuthService<CustomAuth>) {}
+ *
+ *   async sendOTP(phoneNumber: string) {
+ *     // Type-safe access to ALL plugin methods
+ *     return this.authService.api.sendPhoneNumberOTP({ phoneNumber });
  *   }
  * }
  * ```
  */
 @Injectable()
-export class AuthService<T extends Auth = Auth> {
+export class AuthService<T extends AuthWithOpenAPI = AuthWithOpenAPI> {
 	constructor(
 		@Inject(AUTH_MODULE_OPTIONS)
-		private readonly options: AuthModuleConfig,
+		private readonly options: AuthModuleConfig<T>,
 	) {}
 
 	/**
@@ -143,40 +148,5 @@ export class AuthService<T extends Auth = Auth> {
 	 */
 	get instance(): T {
 		return this.options.auth as T;
-	}
-
-	/**
-	 * **Health check** - Verify auth instance is properly initialized
-	 *
-	 * Useful for startup health checks and diagnostics.
-	 *
-	 * @returns `true` if auth instance is valid and ready
-	 */
-	isInitialized(): boolean {
-		return (
-			this.options.auth &&
-			typeof this.options.auth.api === 'object' &&
-			this.options.auth.api !== null
-		);
-	}
-
-	/**
-	 * **Get base URL** - Retrieve configured application base URL
-	 *
-	 * @returns Base URL string or undefined if not configured
-	 */
-	getBaseUrl(): string | undefined {
-		return this.options.auth.options?.baseURL;
-	}
-
-	/**
-	 * **Get secret** - Retrieve auth secret (use with caution!)
-	 *
-	 * ⚠️ **Security warning:** Never expose this in API responses
-	 *
-	 * @returns Auth secret or undefined
-	 */
-	getSecret(): string | undefined {
-		return this.options.auth.options?.secret;
 	}
 }

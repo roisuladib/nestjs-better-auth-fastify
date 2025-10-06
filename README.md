@@ -763,6 +763,73 @@ new FastifyAdapter({
 })
 ```
 
+### Custom Plugins and Type Safety
+
+By default, `AuthService` includes openAPI plugin methods. For custom plugins, you must manually define types.
+
+**Default Usage (openAPI included):**
+```typescript
+@Injectable()
+export class UserService {
+  constructor(private authService: AuthService) {}
+
+  async getOpenAPISpec() {
+    // openAPI methods available by default
+    return this.authService.api.generateOpenAPISchema();
+  }
+}
+```
+
+**Custom Plugins (Manual Type Definition):**
+
+```typescript
+// types/custom-auth.types.ts
+import type { Auth } from 'better-auth';
+import type {
+  twoFactor,
+  phoneNumber,
+  admin,
+  openAPI
+} from 'better-auth/plugins';
+import type { AdminOptions } from 'better-auth/plugins/admin';
+
+// Define type matching ALL your installed plugins
+export type CustomAuth = Auth & {
+  api: Auth['api']
+    & ReturnType<typeof openAPI>['endpoints']       // Keep openAPI for docs
+    & ReturnType<typeof twoFactor>['endpoints']
+    & ReturnType<typeof phoneNumber>['endpoints']
+    & ReturnType<typeof admin<AdminOptions>>['endpoints'];
+};
+```
+
+```typescript
+// services/user.service.ts
+import type { CustomAuth } from '../types/custom-auth.types';
+
+@Injectable()
+export class UserService {
+  // Use custom type as generic
+  constructor(private authService: AuthService<CustomAuth>) {}
+
+  async sendOTP(phoneNumber: string) {
+    // Type-safe access to ALL plugin methods
+    return this.authService.api.sendPhoneNumberOTP({ phoneNumber });
+  }
+
+  async enableTwoFactor(userId: string) {
+    // twoFactor plugin methods available
+    return this.authService.api.generateTwoFactorSecret({ userId });
+  }
+}
+```
+
+**Important Notes:**
+- ⚠️ **No automatic type inference** - You must manually define types for custom plugins
+- 📝 **Include ALL plugins** - List every plugin you install (including openAPI)
+- 🎯 **Use `Auth` as base** - Don't extend `AuthWithOpenAPI` for custom types
+- 💡 **DI Limitation** - TypeScript cannot infer types from runtime Better Auth configuration
+
 ## API Reference
 
 ### Core Components

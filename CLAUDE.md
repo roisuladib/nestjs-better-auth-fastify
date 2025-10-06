@@ -142,11 +142,36 @@ The module uses NestJS's `ConfigurableModuleBuilder` for enhanced type safety an
 - `User` - Extracted from UserSession
 - `AuthSession` - Session metadata
 - `AuthHookContext` - Inferred from Better Auth middleware
+- `AuthWithOpenAPI` - Internal default type with openAPI plugin (used as AuthService default generic)
+- `OpenAPIEndpoints` - Type for openAPI plugin endpoints
 
 **Type Safety Strategy**:
 - Use Better Auth's types as source of truth
 - Infer types from Better Auth APIs (no duplication)
-- Generic `AuthService<T extends Auth>` for plugin support
+- Generic `AuthService<T extends AuthWithOpenAPI = AuthWithOpenAPI>` with openAPI by default
+- Users define custom types using `Auth` as base for additional plugins
+
+**Plugin Type Handling**:
+- Default: `AuthService` includes openAPI plugin methods automatically
+- Custom plugins: Users must manually define type matching ALL installed plugins:
+  ```typescript
+  import type { Auth } from 'better-auth';
+  import type { twoFactor, phoneNumber, admin, openAPI } from 'better-auth/plugins';
+  import type { AdminOptions } from 'better-auth/plugins/admin';
+
+  export type CustomAuth = Auth & {
+    api: Auth['api']
+      & ReturnType<typeof openAPI>['endpoints']
+      & ReturnType<typeof twoFactor>['endpoints']
+      & ReturnType<typeof phoneNumber>['endpoints']
+      & ReturnType<typeof admin<AdminOptions>>['endpoints'];
+  };
+
+  // Use in services
+  constructor(private authService: AuthService<CustomAuth>) {}
+  ```
+- **Important**: No automatic type inference from runtime plugins due to TypeScript + DI limitations
+- **Note**: Always include openAPI in custom type definitions to maintain documentation generation capabilities
 
 ### Multi-Context Support
 

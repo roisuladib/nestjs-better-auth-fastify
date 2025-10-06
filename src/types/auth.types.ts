@@ -1,6 +1,6 @@
-import type { ModuleMetadata, Type } from '@nestjs/common';
 import type { Auth } from 'better-auth';
 import type { getSession } from 'better-auth/api';
+import type { openAPI } from 'better-auth/plugins';
 
 /**
  * **User session** - Complete authenticated session with user data
@@ -143,40 +143,61 @@ export interface AuthConfigProvider {
 }
 
 /**
- * **Async configuration** - Dynamic module setup with DI
+ * **OpenAPI Plugin Endpoints** - Type definition for openAPI plugin endpoints
  *
- * Flexible async configuration supporting multiple patterns:
- * - `useFactory` - Factory function with injectable dependencies
- * - `useClass` - Configuration provider class
- * - `useExisting` - Existing provider reference
+ * Extracts endpoint types from Better Auth's openAPI plugin.
+ * Used as default plugin for AuthWithOpenAPI.
+ */
+export type OpenAPIEndpoints = ReturnType<typeof openAPI>['endpoints'];
+
+/**
+ * **Auth with OpenAPI** - Internal default type for AuthService
+ *
+ * **⚠️ Internal Type**: This is the default generic type for AuthService.
+ * You typically don't need to use this directly.
+ *
+ * Extends base Better Auth with openAPI plugin endpoints by default.
+ * Provides automatic type support for OpenAPI documentation generation.
+ *
+ * **Default behavior**: AuthService uses this type automatically when no generic is specified.
+ *
+ * **For custom plugins**: Define your own type using `Auth` as base (not this type).
  *
  * @example
  * ```typescript
- * // Factory pattern (most common)
- * AuthModule.forRootAsync({
- *   imports: [ConfigModule],
- *   useFactory: (config: ConfigService) => ({
- *     auth: betterAuth({
- *       secret: config.get('AUTH_SECRET'),
- *       database: setupDb(config)
- *     })
- *   }),
- *   inject: [ConfigService]
- * })
- *
- * // Class pattern
- * AuthModule.forRootAsync({
- *   useClass: AuthConfigService
- * })
+ * // ✅ Default usage - AuthWithOpenAPI used automatically
+ * @Injectable()
+ * export class MyService {
+ *   constructor(private authService: AuthService) {}
+ *   // authService.api has openAPI methods
+ * }
  * ```
+ *
+ * @example
+ * ```typescript
+ * // ✅ Custom plugins - use Auth as base, not AuthWithOpenAPI
+ * import type { Auth } from 'better-auth';
+ * import type { twoFactor, phoneNumber, admin, openAPI } from 'better-auth/plugins';
+ * import type { AdminOptions } from 'better-auth/plugins/admin';
+ *
+ * // Define type matching ALL your plugins
+ * export type CustomAuth = Auth & {
+ *   api: Auth['api']
+ *     & ReturnType<typeof openAPI>['endpoints']
+ *     & ReturnType<typeof twoFactor>['endpoints']
+ *     & ReturnType<typeof phoneNumber>['endpoints']
+ *     & ReturnType<typeof admin<AdminOptions>>['endpoints'];
+ * };
+ *
+ * // Use custom type in services
+ * @Injectable()
+ * export class MyService {
+ *   constructor(private authService: AuthService<CustomAuth>) {}
+ * }
+ * ```
+ *
+ * @see {@link AuthService} for usage in dependency injection
  */
-export interface AuthModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> {
-	/** Factory function with DI - returns auth config */
-	useFactory?: (...args: unknown[]) => AuthModuleConfig | Promise<AuthModuleConfig>;
-	/** Dependencies to inject into factory */
-	inject?: (string | symbol | Type<unknown>)[];
-	/** Configuration provider class */
-	useClass?: Type<AuthConfigProvider>;
-	/** Existing provider reference */
-	useExisting?: Type<AuthConfigProvider>;
+export interface AuthWithOpenAPI extends Auth {
+	api: Auth['api'] & OpenAPIEndpoints;
 }
