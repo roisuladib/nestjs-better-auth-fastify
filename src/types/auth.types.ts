@@ -1,5 +1,5 @@
 import type { ModuleMetadata, Type } from '@nestjs/common';
-import type { betterAuth } from 'better-auth';
+import type { Auth } from 'better-auth';
 import type { getSession } from 'better-auth/api';
 
 /**
@@ -8,29 +8,39 @@ import type { getSession } from 'better-auth/api';
  */
 export type UserSession = NonNullable<Awaited<ReturnType<ReturnType<typeof getSession>>>>;
 
-export type AuthInstance = ReturnType<typeof betterAuth>;
+/**
+ * Type representing a user object from the session
+ * Provides type safety for user data access
+ */
+export type User = UserSession['user'];
+
+/**
+ * Type representing a session object from Better Auth
+ * Provides type safety for session data access
+ */
+export type AuthSession = UserSession['session'];
 
 /**
  * Configuration options for the AuthModule
  */
-export type AuthModuleOptions = {
-	disableExceptionFilter?: boolean;
-	disableTrustedOriginsCors?: boolean;
+export type AuthModuleFeatures = {
+	disableExceptionFilter: boolean;
+	disableGlobalAuthGuard: boolean;
+	disableTrustedOriginsCors: boolean;
 };
 
 /**
  * Return type for auth configuration factory
  */
-export type AuthFactoryResult<T extends AuthInstance = AuthInstance> = {
+export interface AuthModuleConfig<T extends Auth = Auth> extends AuthModuleFeatures {
 	auth: T;
-	options?: AuthModuleOptions;
-};
+}
 
 /**
  * Configuration provider interface for auth module
  */
 export interface AuthConfigProvider {
-	createAuthOptions(): AuthFactoryResult | Promise<AuthFactoryResult>;
+	createAuthConfig(): AuthModuleConfig | Promise<AuthModuleConfig>;
 }
 
 /**
@@ -40,7 +50,7 @@ export interface AuthModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> 
 	/**
 	 * Factory function that returns an object with auth instance and optional module options
 	 */
-	useFactory?: (...args: unknown[]) => AuthFactoryResult | Promise<AuthFactoryResult>;
+	useFactory?: (...args: unknown[]) => AuthModuleConfig | Promise<AuthModuleConfig>;
 	/**
 	 * Providers to inject into the factory function
 	 */

@@ -1,5 +1,5 @@
 // Auth module types
 export * from './auth.types';
 
-// Express type augmentations
+// Fastify type augmentations
 import './fastify.d.ts';

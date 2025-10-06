@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.2.2/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.2.5/schema.json",
 	"assist": {
 		"enabled": true,
 		"actions": {
@@ -37,7 +37,8 @@
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "single",
-			"semicolons": "always"
+			"semicolons": "always",
+			"arrowParentheses": "asNeeded"
 		},
 		"parser": {
 			"unsafeParameterDecoratorsEnabled": true

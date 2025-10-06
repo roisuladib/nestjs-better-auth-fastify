@@ -8,10 +8,10 @@
 		"skipLibCheck": true,
 		"declaration": true,
 		"isolatedDeclarations": true,
-		"outDir": "./dist",
-		"rootDir": "./src",
 		"experimentalDecorators": true,
-		"emitDecoratorMetadata": true
+		"emitDecoratorMetadata": true,
+		"outDir": "./dist",
+		"rootDir": "./src"
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist", "bunup.config.ts"]

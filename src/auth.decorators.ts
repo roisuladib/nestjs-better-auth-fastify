@@ -1,39 +1,72 @@
-import type { CustomDecorator, ExecutionContext } from '@nestjs/common';
+import type { ExecutionContext } from '@nestjs/common';
+import type { ReflectableDecorator } from '@nestjs/core';
 import type { createAuthMiddleware } from 'better-auth/api';
 import type { FastifyRequest } from 'fastify';
 
-import { createParamDecorator, SetMetadata } from '@nestjs/common';
-
-import { AFTER_HOOK_KEY, BEFORE_HOOK_KEY, HOOK_KEY } from './auth.symbols';
-
-export enum Role {
-	System = 'system',
-	User = 'user',
-	Admin = 'admin',
-}
-
-export const ROLES_KEY = 'roles' as const;
-export const Roles = (...roles: Role[]): CustomDecorator<typeof ROLES_KEY> =>
-	SetMetadata(ROLES_KEY, roles);
+import { createParamDecorator } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 
 /**
- * Marks a route or a controller as public, allowing unauthenticated access.
- * When applied, the AuthGuard will skip authentication checks.
+ * Skip authentication for public routes
+ *
+ * Use on routes that should be accessible without authentication.
+ * AuthGuard will return early, improving performance for public endpoints.
+ *
+ * @example
+ * ```typescript
+ * @Controller('api')
+ * @UseGuards(AuthGuard)
+ * export class AppController {
+ *   @Public()
+ *   @Get('health')
+ *   getHealth() {
+ *     return { status: 'ok' };
+ *   }
+ * }
+ * ```
  */
-export const Public = (): CustomDecorator<string> => SetMetadata('PUBLIC', true);
+export const Public: ReflectableDecorator<boolean> = Reflector.createDecorator<boolean>();
 
 /**
- * Marks a route or a controller as having optional authentication.
- * When applied, the AuthGuard will allow the request to proceed
- * even if no session is present.
+ * Allow unauthenticated access with optional session
+ *
+ * Route works with or without authentication. Session will be null
+ * if user is not authenticated. Use for content that adapts based on auth state.
+ *
+ * @example
+ * ```typescript
+ * @Optional()
+ * @Get('posts')
+ * getPosts(@Session session) {
+ *   if (session?.user) {
+ *     return this.getPersonalizedPosts(session.user.id);
+ *   }
+ *   return this.getPublicPosts();
+ * }
+ * ```
  */
-export const Optional = (): CustomDecorator<string> => SetMetadata('OPTIONAL', true);
+export const Optional: ReflectableDecorator<boolean> = Reflector.createDecorator<boolean>();
 
 /**
- * Parameter decorator that extracts the user session from the request.
- * Provides easy access to the authenticated user's session data in controller methods.
+ * Extract user session from request
+ *
+ * Provides authenticated user's session data in controller methods.
+ * Returns null for @Optional routes without authentication.
+ * Contains user info and session metadata from Better Auth.
+ *
+ * @example
+ * ```typescript
+ * @Get('profile')
+ * getProfile(@Session session) {
+ *   return {
+ *     id: session.user.id,
+ *     email: session.user.email,
+ *     name: session.user.name
+ *   };
+ * }
+ * ```
  */
-export const Session: ReturnType<typeof createParamDecorator> = createParamDecorator(
+export const Session: ParameterDecorator = createParamDecorator(
 	(_data: unknown, context: ExecutionContext): unknown => {
 		const request = context.switchToHttp().getRequest<FastifyRequest>();
 		return request.session;
@@ -41,27 +74,89 @@ export const Session: ReturnType<typeof createParamDecorator> = createParamDecor
 );
 
 /**
- * Represents the context object passed to hooks.
- * This type is derived from the parameters of the createAuthMiddleware function.
+ * Context object passed to Better Auth hooks
+ *
+ * Contains request, response, and auth-related data for middleware processing.
+ * Use this type when implementing hook methods.
  */
 export type AuthHookContext = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];
 
 /**
- * Registers a method to be executed before a specific auth route is processed.
- * @param path - The auth route path that triggers this hook (must start with '/')
+ * Execute logic before auth route processing
+ *
+ * Intercept Better Auth routes before they execute.
+ * Perfect for validation, rate limiting, logging, or custom business logic.
+ *
+ * @param path - Auth route path that triggers this hook (must start with '/')
+ * @example
+ * ```typescript
+ * @Hook()
+ * @Injectable()
+ * export class AuthHooks {
+ *   @BeforeHook('/sign-in')
+ *   async beforeSignIn(ctx: AuthHookContext) {
+ *     // Rate limiting
+ *     await this.rateLimiter.check(ctx.request.ip);
+ *
+ *     // Logging
+ *     this.logger.log(`Sign-in attempt from ${ctx.request.ip}`);
+ *   }
+ * }
+ * ```
  */
-export const BeforeHook = (path: `/${string}`): CustomDecorator<symbol> =>
-	SetMetadata(BEFORE_HOOK_KEY, path);
+export const BeforeHook: ReflectableDecorator<`/${string}`> =
+	Reflector.createDecorator<`/${string}`>();
 
 /**
- * Registers a method to be executed after a specific auth route is processed.
- * @param path - The auth route path that triggers this hook (must start with '/')
+ * Execute logic after auth route processing
+ *
+ * Intercept Better Auth routes after they execute successfully.
+ * Perfect for notifications, analytics, webhooks, or cleanup tasks.
+ *
+ * @param path - Auth route path that triggers this hook (must start with '/')
+ * @example
+ * ```typescript
+ * @Hook()
+ * @Injectable()
+ * export class AuthHooks {
+ *   @AfterHook('/sign-up')
+ *   async afterSignUp(ctx: AuthHookContext) {
+ *     // Send welcome email
+ *     await this.emailService.sendWelcome(ctx.body.email);
+ *
+ *     // Track analytics
+ *     this.analytics.track('user_registered', { userId: ctx.user.id });
+ *   }
+ * }
+ * ```
  */
-export const AfterHook = (path: `/${string}`): CustomDecorator<symbol> =>
-	SetMetadata(AFTER_HOOK_KEY, path);
+export const AfterHook: ReflectableDecorator<`/${string}`> =
+	Reflector.createDecorator<`/${string}`>();
 
 /**
- * Class decorator that marks a provider as containing hook methods.
- * Must be applied to classes that use BeforeHook or AfterHook decorators.
+ * Mark provider as containing hook methods
+ *
+ * Required class decorator for providers using @BeforeHook or @AfterHook.
+ * Enables automatic discovery and registration of hooks during module initialization.
+ *
+ * @example
+ * ```typescript
+ * @Hook()
+ * @Injectable()
+ * export class AuthHooks {
+ *   @BeforeHook('/sign-in')
+ *   beforeSignIn(ctx: AuthHookContext) { }
+ *
+ *   @AfterHook('/sign-up')
+ *   afterSignUp(ctx: AuthHookContext) { }
+ * }
+ *
+ * // Register in module
+ * @Module({
+ *   providers: [AuthHooks],
+ *   imports: [BetterAuthModule.register({ ... })]
+ * })
+ * export class AppModule {}
+ * ```
  */
-export const Hook = (): ClassDecorator => SetMetadata(HOOK_KEY, true);
+export const Hook: ReflectableDecorator<boolean> = Reflector.createDecorator<boolean>();

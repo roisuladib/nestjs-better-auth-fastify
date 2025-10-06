@@ -497,13 +497,12 @@ import {
 } from '@nestjs/common';
 import { AuthGuard, AuthService } from 'nestjs-better-auth-fastify';
 import type { FastifyRequest } from 'fastify';
-import type { AuthInstance } from '../auth.config';
 
 @Controller('api/user-management')
 @UseGuards(AuthGuard)
 export class UserManagementController {
   constructor(
-    private readonly authService: AuthService<AuthInstance>
+    private readonly authService: AuthService
   ) {}
 
   @Get('session')
@@ -654,11 +653,9 @@ import { setupDatabase } from './database.config';
         });
 
         return {
-          auth: authInstance,
-          options: {
-            disableExceptionFilter: config.get('NODE_ENV') === 'test',  // Disable in test environment
-            disableTrustedOriginsCors: config.get('AUTH_DISABLE_CORS', 'false') === 'true',
-          }
+        	auth: authInstance,
+          disableExceptionFilter: config.get('NODE_ENV') === 'test',  // Disable in test environment
+         	disableTrustedOriginsCors: config.get('AUTH_DISABLE_CORS', 'false') === 'true',
         };
       },
       inject: [ConfigService],
@@ -759,7 +756,7 @@ interface AuthHookContext {
 }
 
 // Module configuration options
-interface AuthModuleOptions {
+interface AuthModuleFeatures {
   disableExceptionFilter?: boolean;
   disableTrustedOriginsCors?: boolean;
 }
@@ -770,12 +767,12 @@ interface AuthModuleOptions {
 **Injection Tokens:**
 ```typescript
 // For advanced users who need direct access to injection tokens
-export const AUTH_INSTANCE_KEY: unique symbol;
-export const AUTH_MODULE_OPTIONS_KEY: unique symbol;
-export const BEFORE_HOOK_KEY: unique symbol;
-export const AFTER_HOOK_KEY: unique symbol;
-export const HOOK_KEY: unique symbol;
+export const AUTH_MODULE_OPTIONS: unique symbol;
 ```
+
+## Contributing
+
+Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines.
 
 ## License
 
