@@ -76,8 +76,8 @@ const HOOKS = [
 	providers: [AuthService],
 	exports: [AuthService],
 })
-export class AuthNewModule extends ConfigurableModuleClass implements NestModule, OnModuleInit {
-	private readonly logger = new Logger(AuthNewModule.name);
+export class AuthModule extends ConfigurableModuleClass implements NestModule, OnModuleInit {
+	private readonly logger = new Logger(AuthModule.name);
 
 	constructor(
 		@Inject(DiscoveryService)
