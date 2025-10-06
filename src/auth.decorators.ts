@@ -7,64 +7,112 @@ import { createParamDecorator } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
 /**
- * Skip authentication for public routes
+ * **Skip authentication** - Make routes publicly accessible
  *
- * Use on routes that should be accessible without authentication.
- * AuthGuard will return early, improving performance for public endpoints.
+ * Perfect for health checks, landing pages, and public APIs.
+ * Zero performance overhead - guard exits immediately without session lookup.
  *
  * @example
  * ```typescript
- * @Controller('api')
- * @UseGuards(AuthGuard)
- * export class AppController {
- *   @Public()
- *   @Get('health')
- *   getHealth() {
- *     return { status: 'ok' };
- *   }
+ * // Health check endpoint
+ * @Public()
+ * @Get('health')
+ * getHealth() {
+ *   return { status: 'ok', uptime: process.uptime() };
+ * }
+ *
+ * // Public blog posts
+ * @Public()
+ * @Get('posts')
+ * getPosts() {
+ *   return this.postsService.findAll();
  * }
  * ```
+ *
+ * @see {@link Optional} for routes that work with or without auth
  */
 export const Public: ReflectableDecorator<boolean> = Reflector.createDecorator<boolean>();
 
 /**
- * Allow unauthenticated access with optional session
+ * **Optional authentication** - Supercharge UX with personalization
  *
- * Route works with or without authentication. Session will be null
- * if user is not authenticated. Use for content that adapts based on auth state.
+ * Build adaptive experiences that work for everyone:
+ * - Logged-in users get personalized content
+ * - Anonymous users get public content
+ * - No authentication barriers, maximum conversion
  *
  * @example
  * ```typescript
+ * // E-commerce product recommendations
  * @Optional()
- * @Get('posts')
- * getPosts(@Session session) {
+ * @Get('products')
+ * getProducts(@Session() session?: UserSession) {
  *   if (session?.user) {
- *     return this.getPersonalizedPosts(session.user.id);
+ *     // Personalized based on purchase history
+ *     return this.getRecommendedProducts(session.user.id);
  *   }
- *   return this.getPublicPosts();
+ *   // Best sellers for anonymous users
+ *   return this.getBestSellers();
+ * }
+ *
+ * // Dashboard with smart defaults
+ * @Optional()
+ * @Get('dashboard')
+ * getDashboard(@Session() session?: UserSession) {
+ *   return {
+ *     welcome: session?.user
+ *       ? `Welcome back, ${session.user.name}!`
+ *       : 'Welcome! Sign in for personalized content.',
+ *     data: session ? this.getUserData(session.user.id) : this.getPublicData()
+ *   };
  * }
  * ```
+ *
+ * @see {@link Public} for fully public routes
+ * @see {@link Session} for extracting user data
  */
 export const Optional: ReflectableDecorator<boolean> = Reflector.createDecorator<boolean>();
 
 /**
- * Extract user session from request
+ * **Extract user session** - Type-safe access to authenticated user
  *
- * Provides authenticated user's session data in controller methods.
- * Returns null for @Optional routes without authentication.
- * Contains user info and session metadata from Better Auth.
+ * Get complete user data and session metadata with full TypeScript support.
+ * Works seamlessly with `@Optional()` - returns undefined when not authenticated.
+ *
+ * **What you get:**
+ * - `session.user` - User profile (id, email, name, custom fields)
+ * - `session.session` - Session metadata (expiresAt, ipAddress, userAgent)
+ * - Full type safety with IntelliSense autocomplete
  *
  * @example
  * ```typescript
+ * // User profile endpoint
  * @Get('profile')
- * getProfile(@Session session) {
+ * getProfile(@Session() session: UserSession) {
  *   return {
  *     id: session.user.id,
  *     email: session.user.email,
- *     name: session.user.name
+ *     name: session.user.name,
+ *     sessionExpiry: session.session.expiresAt
  *   };
  * }
+ *
+ * // Personalized content
+ * @Get('feed')
+ * getFeed(@Session() { user }: UserSession) {
+ *   return this.feedService.getPersonalizedFeed(user.id);
+ * }
+ *
+ * // Optional auth with type safety
+ * @Optional()
+ * @Get('recommendations')
+ * getRecommendations(@Session() session?: UserSession) {
+ *   const userId = session?.user.id;
+ *   return this.recommendationService.get(userId);
+ * }
  * ```
+ *
+ * @see {@link UserSession} for complete type definition
  */
 export const Session: ParameterDecorator = createParamDecorator(
 	(_data: unknown, context: ExecutionContext): unknown => {
@@ -74,89 +122,202 @@ export const Session: ParameterDecorator = createParamDecorator(
 );
 
 /**
- * Context object passed to Better Auth hooks
+ * **Hook context** - Complete request/response access in authentication lifecycle
  *
- * Contains request, response, and auth-related data for middleware processing.
- * Use this type when implementing hook methods.
+ * Everything you need to implement custom auth logic:
+ * - `ctx.body` - Request payload (email, password, etc.)
+ * - `ctx.headers` - Request headers for IP, user-agent tracking
+ * - `ctx.user` - Authenticated user (available in @AfterHook)
+ * - `ctx.request` - Full Fastify request object
+ *
+ * @see {@link BeforeHook} for pre-authentication hooks
+ * @see {@link AfterHook} for post-authentication hooks
  */
 export type AuthHookContext = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];
 
 /**
- * Execute logic before auth route processing
+ * **Pre-authentication hook** - Intercept and validate before Better Auth processes
  *
- * Intercept Better Auth routes before they execute.
- * Perfect for validation, rate limiting, logging, or custom business logic.
+ * Build enterprise-grade security with pre-validation:
+ * - Rate limiting to prevent brute-force attacks
+ * - Email domain whitelisting/blacklisting
+ * - IP-based geo-blocking
+ * - Custom validation logic
+ * - Security event logging
  *
- * @param path - Auth route path that triggers this hook (must start with '/')
+ * **Pro tip:** Throw errors to reject requests before authentication
+ *
+ * @param path - Better Auth route (e.g., '/sign-in/email', '/sign-up/email')
  * @example
  * ```typescript
  * @Hook()
  * @Injectable()
- * export class AuthHooks {
- *   @BeforeHook('/sign-in')
- *   async beforeSignIn(ctx: AuthHookContext) {
- *     // Rate limiting
- *     await this.rateLimiter.check(ctx.request.ip);
+ * export class SecurityHooks {
+ *   constructor(
+ *     private rateLimiter: RateLimiterService,
+ *     private blocklist: BlocklistService
+ *   ) {}
  *
- *     // Logging
- *     this.logger.log(`Sign-in attempt from ${ctx.request.ip}`);
+ *   // Prevent brute-force attacks
+ *   @BeforeHook('/sign-in/email')
+ *   async preventBruteForce(ctx: AuthHookContext) {
+ *     const isAllowed = await this.rateLimiter.check(ctx.request.ip, {
+ *       max: 5,
+ *       window: '15m'
+ *     });
+ *     if (!isAllowed) {
+ *       throw new Error('Too many sign-in attempts. Try again in 15 minutes.');
+ *     }
+ *   }
+ *
+ *   // Block disposable emails
+ *   @BeforeHook('/sign-up/email')
+ *   async validateEmail(ctx: AuthHookContext) {
+ *     const { email } = ctx.body;
+ *     const domain = email.split('@')[1];
+ *
+ *     if (await this.blocklist.isDisposable(domain)) {
+ *       throw new Error('Disposable email addresses are not allowed');
+ *     }
+ *   }
+ *
+ *   // Enterprise domain restriction
+ *   @BeforeHook('/sign-up/email')
+ *   async enforceWorkEmail(ctx: AuthHookContext) {
+ *     const { email } = ctx.body;
+ *     if (!email.endsWith('@company.com')) {
+ *       throw new Error('Only company email addresses allowed');
+ *     }
  *   }
  * }
  * ```
+ *
+ * @see {@link AfterHook} for post-authentication hooks
+ * @see {@link Hook} to mark class as hook provider
  */
 export const BeforeHook: ReflectableDecorator<`/${string}`> =
 	Reflector.createDecorator<`/${string}`>();
 
 /**
- * Execute logic after auth route processing
+ * **Post-authentication hook** - Execute logic after successful authentication
  *
- * Intercept Better Auth routes after they execute successfully.
- * Perfect for notifications, analytics, webhooks, or cleanup tasks.
+ * Build complete user onboarding flows:
+ * - Welcome emails and notifications
+ * - Analytics and conversion tracking
+ * - User profile enrichment
+ * - Webhook triggers
+ * - Audit logging
  *
- * @param path - Auth route path that triggers this hook (must start with '/')
+ * **Pro tip:** Access `ctx.user` to get freshly authenticated user data
+ *
+ * @param path - Better Auth route (e.g., '/sign-up/email', '/sign-in/email')
  * @example
  * ```typescript
  * @Hook()
  * @Injectable()
- * export class AuthHooks {
- *   @AfterHook('/sign-up')
- *   async afterSignUp(ctx: AuthHookContext) {
- *     // Send welcome email
- *     await this.emailService.sendWelcome(ctx.body.email);
+ * export class OnboardingHooks {
+ *   constructor(
+ *     private emailService: EmailService,
+ *     private analytics: AnalyticsService,
+ *     private crm: CRMService
+ *   ) {}
  *
- *     // Track analytics
- *     this.analytics.track('user_registered', { userId: ctx.user.id });
+ *   // Welcome new users
+ *   @AfterHook('/sign-up/email')
+ *   async welcomeNewUser(ctx: AuthHookContext) {
+ *     const user = ctx.user!;
+ *
+ *     // Send welcome email with onboarding guide
+ *     await this.emailService.sendTemplate('welcome', {
+ *       to: user.email,
+ *       name: user.name,
+ *       verificationLink: await this.generateVerificationLink(user.id)
+ *     });
+ *
+ *     // Track conversion in analytics
+ *     await this.analytics.track('user_signed_up', {
+ *       userId: user.id,
+ *       email: user.email,
+ *       source: ctx.request.headers.referer
+ *     });
+ *
+ *     // Sync to CRM
+ *     await this.crm.createContact({
+ *       email: user.email,
+ *       name: user.name,
+ *       signupDate: new Date()
+ *     });
+ *   }
+ *
+ *   // Track user activity
+ *   @AfterHook('/sign-in/email')
+ *   async trackSignIn(ctx: AuthHookContext) {
+ *     const user = ctx.user!;
+ *
+ *     // Update last login timestamp
+ *     await this.userService.updateLastLogin(user.id, {
+ *       ip: ctx.request.ip,
+ *       userAgent: ctx.request.headers['user-agent']
+ *     });
+ *
+ *     // Send security notification for new device
+ *     if (await this.isNewDevice(user.id, ctx.request)) {
+ *       await this.emailService.sendSecurityAlert(user.email);
+ *     }
  *   }
  * }
  * ```
+ *
+ * @see {@link BeforeHook} for pre-authentication hooks
+ * @see {@link Hook} to mark class as hook provider
  */
 export const AfterHook: ReflectableDecorator<`/${string}`> =
 	Reflector.createDecorator<`/${string}`>();
 
 /**
- * Mark provider as containing hook methods
+ * **Hook provider marker** - Enable automatic hook discovery
  *
- * Required class decorator for providers using @BeforeHook or @AfterHook.
- * Enables automatic discovery and registration of hooks during module initialization.
+ * Mark your class to enable automatic registration of `@BeforeHook` and `@AfterHook` methods.
+ * Supports full NestJS dependency injection - inject any service you need!
+ *
+ * **Key features:**
+ * - Automatic discovery and registration
+ * - Full dependency injection support
+ * - Multiple hooks per class
+ * - Type-safe hook methods
  *
  * @example
  * ```typescript
  * @Hook()
  * @Injectable()
- * export class AuthHooks {
- *   @BeforeHook('/sign-in')
- *   beforeSignIn(ctx: AuthHookContext) { }
+ * export class AuthLifecycleHooks {
+ *   constructor(
+ *     private emailService: EmailService,
+ *     private logger: Logger,
+ *     private analytics: AnalyticsService
+ *   ) {}
  *
- *   @AfterHook('/sign-up')
- *   afterSignUp(ctx: AuthHookContext) { }
+ *   @BeforeHook('/sign-in/email')
+ *   async beforeSignIn(ctx: AuthHookContext) {
+ *     this.logger.log(`Sign-in attempt: ${ctx.body.email}`);
+ *   }
+ *
+ *   @AfterHook('/sign-up/email')
+ *   async afterSignUp(ctx: AuthHookContext) {
+ *     await this.emailService.sendWelcome(ctx.user!.email);
+ *     await this.analytics.track('user_signed_up');
+ *   }
  * }
  *
- * // Register in module
+ * // Register in module - that's it!
  * @Module({
- *   providers: [AuthHooks],
- *   imports: [BetterAuthModule.register({ ... })]
+ *   imports: [AuthModule.forRoot({ auth })],
+ *   providers: [AuthLifecycleHooks]
  * })
  * export class AppModule {}
  * ```
+ *
+ * @see {@link BeforeHook} for pre-authentication hooks
+ * @see {@link AfterHook} for post-authentication hooks
  */
 export const Hook: ReflectableDecorator<boolean> = Reflector.createDecorator<boolean>();

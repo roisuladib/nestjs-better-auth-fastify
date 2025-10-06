@@ -34,6 +34,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.5",
 		"@nestjs/graphql": "^13.2.0",
+		"@nestjs/testing": "^11.1.6",
 		"@types/bun": "^1.2.23",
 		"bumpp": "^10.2.3",
 		"bunup": "^0.14.16",

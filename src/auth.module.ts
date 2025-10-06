@@ -35,7 +35,7 @@ const HOOKS = [
  * NestJS module that integrates Better Auth with NestJS/Fastify applications.
  * Uses ConfigurableModuleBuilder for enhanced type safety and reduced boilerplate.
  *
- * @class AuthNewModule
+ * @class AuthModule
  * @extends {ConfigurableModuleClass}
  * @implements {NestModule}
  * @implements {OnModuleInit}
@@ -52,7 +52,7 @@ const HOOKS = [
  * @example
  * ```typescript
  * // Static configuration
- * AuthNewModule.forRoot({
+ * AuthModule.forRoot({
  *   auth: betterAuth(config),
  *   disableExceptionFilter: false,
  *   disableTrustedOriginsCors: false,
@@ -60,7 +60,7 @@ const HOOKS = [
  * })
  *
  * // Async configuration
- * AuthNewModule.forRootAsync({
+ * AuthModule.forRootAsync({
  *   imports: [ConfigModule],
  *   useFactory: async (config: ConfigService) => ({
  *     auth: betterAuth(config.get('auth')),
@@ -415,7 +415,7 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 	}
 
 	/**
-	 * Static factory method to create and configure the AuthNewModule.
+	 * Static factory method to create and configure the AuthModule.
 	 * This ensures hooks object exists for proper hook registration.
 	 *
 	 * @static
@@ -428,7 +428,7 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 	 *
 	 * @Module({
 	 *   imports: [
-	 *     AuthNewModule.forRoot({
+	 *     AuthModule.forRoot({
 	 *       auth: betterAuth(config),
 	 *       disableExceptionFilter: false,
 	 *       disableTrustedOriginsCors: false,
@@ -463,7 +463,7 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 	 * @example
 	 * ```typescript
 	 * // Using factory
-	 * AuthNewModule.forRootAsync({
+	 * AuthModule.forRootAsync({
 	 *   imports: [ConfigModule],
 	 *   useFactory: async (config: ConfigService) => ({
 	 *     auth: betterAuth({
@@ -478,7 +478,7 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 	 * })
 	 *
 	 * // Using class
-	 * AuthNewModule.forRootAsync({
+	 * AuthModule.forRootAsync({
 	 *   useClass: AuthConfigService
 	 * })
 	 * ```

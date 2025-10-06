@@ -5,20 +5,62 @@ import type { FastifyRequest } from 'fastify';
 import { GqlExecutionContext } from '@nestjs/graphql';
 
 /**
- * Extract FastifyRequest from any NestJS execution context
+ * **Universal request extractor** - Get FastifyRequest from any context
  *
- * Supports multiple context types: HTTP, GraphQL, WebSocket, and RPC.
- * Used internally by AuthGuard to access request headers for authentication.
+ * Smart helper that extracts Fastify request from **any** NestJS execution context.
+ * Powers AuthGuard to work seamlessly across all transport types.
  *
- * @param context - NestJS execution context from guard or interceptor
- * @returns Fastify request object containing headers, body, and session data
+ * **Supported contexts:**
+ * - ✅ HTTP (REST APIs) - most common
+ * - ✅ GraphQL - Apollo/Mercurius
+ * - ✅ WebSocket - real-time connections
+ * - ✅ RPC - microservices
+ *
+ * **Why you might need this:**
+ * - Building custom guards for specific routes
+ * - Creating interceptors that need auth context
+ * - Implementing custom authentication strategies
+ * - Testing guard logic
+ *
+ * @param context - NestJS execution context (from guard, interceptor, or filter)
+ * @returns Fastify request with headers, body, and session data
+ *
  * @example
  * ```typescript
- * // In custom guard or interceptor
- * async canActivate(context: ExecutionContext) {
- *   const request = extractRequestFromExecutionContext(context);
- *   const authHeader = request.headers.authorization;
- *   return this.validateToken(authHeader);
+ * // Custom rate limiting guard
+ * @Injectable()
+ * export class RateLimitGuard implements CanActivate {
+ *   async canActivate(context: ExecutionContext) {
+ *     const request = extractRequestFromExecutionContext(context);
+ *
+ *     const ip = request.ip;
+ *     const isAllowed = await this.rateLimiter.check(ip);
+ *
+ *     if (!isAllowed) {
+ *       throw new TooManyRequestsException();
+ *     }
+ *
+ *     return true;
+ *   }
+ * }
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Custom logging interceptor
+ * @Injectable()
+ * export class AuthLogInterceptor implements NestInterceptor {
+ *   intercept(context: ExecutionContext, next: CallHandler) {
+ *     const request = extractRequestFromExecutionContext(context);
+ *
+ *     this.logger.log({
+ *       userId: request.user?.id,
+ *       path: request.url,
+ *       method: request.method
+ *     });
+ *
+ *     return next.handle();
+ *   }
  * }
  * ```
  */

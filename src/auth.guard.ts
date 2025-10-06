@@ -12,30 +12,73 @@ import { AUTH_MODULE_OPTIONS } from './auth.symbols';
 import { extractRequestFromExecutionContext } from './auth.utils';
 
 /**
- * Authentication guard for NestJS routes using Better Auth
+ * **Authentication guard** - Protect routes with Better Auth sessions
  *
- * Apply to controllers/routes to enforce authentication.
- * Use decorators to customize behavior per route.
+ * Smart authentication guard with **zero configuration** - works out of the box!
+ * Automatically validates sessions and enriches requests with user data.
+ *
+ * **Key features:**
+ * - 🚀 **Automatic global protection** (disable with `disableGlobalAuthGuard: true`)
+ * - ⚡ **Performance optimized** - early exits for public routes
+ * - 🎯 **Flexible** - use `@Public()` and `@Optional()` decorators
+ * - 📊 **Observability ready** - attaches `req.user` and `req.session`
+ * - 🔒 **Type-safe** - full TypeScript support
  *
  * @example
  * ```typescript
+ * // Method 1: Selective protection
  * @Controller('api')
  * @UseGuards(AuthGuard)
- * export class AppController {
- *   @Get('profile')        // Protected - requires auth
- *   getProfile(@Session session) { return session.user; }
+ * export class UserController {
+ *   @Get('profile')  // ✅ Protected - requires auth
+ *   getProfile(@Session() session: UserSession) {
+ *     return session.user;
+ *   }
  *
  *   @Public()
- *   @Get('health')         // Public - no auth needed
- *   getHealth() { return 'ok'; }
+ *   @Get('health')  // ✅ Public - skips auth check
+ *   getHealth() {
+ *     return { status: 'ok' };
+ *   }
  *
  *   @Optional()
- *   @Get('posts')          // Optional - works with/without auth
- *   getPosts(@Session session) { return session?.user || 'anonymous'; }
+ *   @Get('posts')  // ✅ Adaptive - works with or without auth
+ *   getPosts(@Session() session?: UserSession) {
+ *     return session?.user
+ *       ? this.getPersonalizedPosts(session.user.id)
+ *       : this.getPublicPosts();
+ *   }
+ * }
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Method 2: Global protection (recommended for SPAs)
+ * @Module({
+ *   imports: [
+ *     AuthModule.forRoot({
+ *       auth,
+ *       disableGlobalAuthGuard: false  // Default: auto-protect all routes
+ *     })
+ *   ]
+ * })
+ * export class AppModule {}
+ *
+ * // Then use @Public() to exempt specific routes
+ * @Controller('public')
+ * export class PublicController {
+ *   @Public()
+ *   @Get('landing')
+ *   getLanding() {
+ *     return { welcome: 'No auth needed!' };
+ *   }
  * }
  * ```
  *
  * @throws {APIError} UNAUTHORIZED when authentication required but missing
+ * @see {@link Public} to skip authentication
+ * @see {@link Optional} for optional authentication
+ * @see {@link Session} to extract user data
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -47,11 +90,20 @@ export class AuthGuard implements CanActivate {
 	) {}
 
 	/**
-	 * Validates request authentication and attaches session data
+	 * **Validates authentication** - Smart session validation with performance optimization
 	 *
-	 * @param context - Execution context
-	 * @returns `true` if authorized
-	 * @throws {APIError} UNAUTHORIZED | INTERNAL_SERVER_ERROR
+	 * Execution flow:
+	 * 1. Check `@Public()` → early exit (no session lookup)
+	 * 2. Fetch session from Better Auth
+	 * 3. Enrich request with `session` and `user` properties
+	 * 4. Check `@Optional()` → allow access even without session
+	 * 5. Enforce auth for protected routes
+	 *
+	 * **Performance:** Public routes skip session lookup completely!
+	 *
+	 * @param context - NestJS execution context (HTTP, GraphQL, WebSocket, RPC)
+	 * @returns `true` if user is authorized or route is public/optional
+	 * @throws {APIError} UNAUTHORIZED when auth required but session missing
 	 */
 	async canActivate(context: ExecutionContext): Promise<boolean> {
 		const request = extractRequestFromExecutionContext(context);

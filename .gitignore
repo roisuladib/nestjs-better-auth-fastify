@@ -18,3 +18,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 .turbo
+
+# IDE and editor settings
+.vscode
+.claude

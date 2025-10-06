@@ -9,7 +9,7 @@
 
 **High-performance authentication for NestJS Fastify applications using Better Auth**
 
-[Getting Started](#getting-started) • [Configuration](#configuration) • [Usage Guide](#usage-guide) • [Performance](#performance) • [Examples](#examples)
+📦 [Installation](#installation) • 🚀 [Quick Start](#quick-start) • ⚙️ [Configuration](#configuration) • 📖 [Usage Guide](#usage-guide) • 🎯 [Common Use Cases](#common-use-cases) • 🔧 [Advanced Setup](#advanced-setup) • 📚 [API Reference](#api-reference)
 
 </div>
 
@@ -30,15 +30,16 @@
 
 ## Features
 
-- 🚀 **Easy Integration** - Simple setup with NestJS modules
-- 🔒 **Authentication Guards** - Built-in guards for protected routes
-- 🎯 **Decorators** - Convenient decorators for accessing user sessions
-- ⚡ **Fastify Optimized** - Built specifically for NestJS Fastify adapter
-- 🔧 **Flexible Configuration** - Synchronous and asynchronous setup
-- 🪝 **Hooks Support** - Before/After hooks with dependency injection
-- 🛡️ **Exception Handling** - Built-in error handling with custom filters
-- 🌐 **CORS Support** - Automatic CORS configuration from Better Auth
-- 📝 **TypeScript First** - Full TypeScript support with proper type inference
+- 🚀 **Zero Configuration** - Works out of the box with sensible defaults
+- ⚡ **Performance Optimized** - Early exits for public routes, minimal overhead
+- 🔒 **Smart Guards** - Automatic global protection with `@Public()` and `@Optional()` support
+- 🎯 **Type-Safe Decorators** - Full IntelliSense with `@Session()`, `@BeforeHook()`, `@AfterHook()`
+- 🪝 **Enterprise Hooks** - Build onboarding flows, rate limiting, and security checks with DI
+- 🛡️ **Automatic Error Handling** - Consistent error responses across all auth endpoints
+- 🌐 **Smart CORS** - Auto-configured from Better Auth `trustedOrigins`
+- 📊 **Observability Ready** - Request enrichment with `req.user` and `req.session`
+- 🔧 **Flexible Setup** - Sync/async configuration with ConfigModule support
+- 📝 **Full TypeScript** - Complete type safety from config to runtime
 
 ### Installation
 
@@ -101,101 +102,26 @@ npm install @nestjs/common @nestjs/core @nestjs/platform-fastify fastify
 
 ## Quick Start
 
-### Step 1: Database Configuration
+Get authentication running in 5 minutes! 🚀
 
-Set up your database connection with optimized pool settings:
+### 1. Install Dependencies
+
+```bash
+npm install nestjs-better-auth-fastify better-auth drizzle-orm pg
+```
+
+### 2. Setup Database
 
 ```typescript
 // lib/db.ts
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import * as schema from './schema'
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 20, // Connection pool size for high throughput
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
-
-export const db = drizzle(pool, {
-  schema,
-  logger: true,
-  casing: 'snake_case'
-});
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const db = drizzle(pool);
 ```
 
-Define your authentication schema:
-
-```typescript
-// lib/schema.ts
-import * as t from 'drizzle-orm/pg-core';
-
-export const users = t.pgTable('users', {
-  id: t.text().primaryKey(),
-  name: t.text().notNull(),
-  email: t.text().notNull().unique(),
-  emailVerified: t
-    .boolean()
-    .$defaultFn(() => false)
-    .notNull(),
-  image: t.text(),
-  createdAt: t
-    .timestamp()
-    .$defaultFn(() => /* @__PURE__ */ new Date())
-    .notNull(),
-  updatedAt: t
-    .timestamp()
-    .$defaultFn(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});
-
-export const sessions = t.pgTable('sessions', {
-  id: t.text().primaryKey(),
-  expiresAt: t.timestamp().notNull(),
-  token: t.text().notNull().unique(),
-  createdAt: t.timestamp().notNull(),
-  updatedAt: t.timestamp().notNull(),
-  ipAddress: t.text(),
-  userAgent: t.text(),
-  userId: t
-    .text()
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-});
-
-export const accounts = t.pgTable('accounts', {
-  id: t.text().primaryKey(),
-  accountId: t.text().notNull(),
-  providerId: t.text().notNull(),
-  userId: t
-    .text()
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  accessToken: t.text(),
-  refreshToken: t.text(),
-  idToken: t.text(),
-  accessTokenExpiresAt: t.timestamp(),
-  refreshTokenExpiresAt: t.timestamp(),
-  scope: t.text(),
-  password: t.text(),
-  createdAt: t.timestamp().notNull(),
-  updatedAt: t.timestamp().notNull(),
-});
-
-export const verifications = t.pgTable('verifications', {
-  id: t.text().primaryKey(),
-  identifier: t.text().notNull(),
-  value: t.text().notNull(),
-  expiresAt: t.timestamp().notNull(),
-  createdAt: t.timestamp().$defaultFn(() => /* @__PURE__ */ new Date()),
-  updatedAt: t.timestamp().$defaultFn(() => /* @__PURE__ */ new Date()),
-});
-```
-
-### Step 2: Authentication Setup
-
-Create your Better Auth configuration optimized for Fastify:
+### 3. Configure Authentication
 
 ```typescript
 // auth.config.ts
@@ -203,82 +129,149 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db } from './lib/db';
 
-export const authInstance = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: 'pg',
-    usePlural: true, // Uses plural table names (users, sessions, etc.)
-  }),
-  emailAndPassword: {
-    enabled: true,
-    requireEmailVerification: true,
-  },
-  session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // Update session daily
-    cookieCache: {
-      enabled: true,
-      maxAge: 5 * 60, // 5 minutes cache
-    }
-  },
-  trustedOrigins: [
-    "http://localhost:3000",
-    process.env.FRONTEND_URL,
-  ].filter(Boolean),
+export const auth = betterAuth({
+  database: drizzleAdapter(db, { provider: 'pg' }),
+  emailAndPassword: { enabled: true },
 });
-
-export type AuthInstance = typeof authInstance;
 ```
 
-### Step 3: NestJS Integration
-
-Integrate with your NestJS Fastify application:
+### 4. Register Module
 
 ```typescript
 // app.module.ts
 import { Module } from '@nestjs/common';
 import { AuthModule } from 'nestjs-better-auth-fastify';
-import { authInstance } from './auth.config';
-import { AppController } from './app.controller';
+import { auth } from './auth.config';
 
 @Module({
   imports: [
-    AuthModule.forRoot(authInstance, {
-      disableExceptionFilter: false,    // Enable exception filter (default)
-      disableTrustedOriginsCors: false  // Enable trusted origins CORS (default)
-    }),
+    AuthModule.forRoot({ auth }),
   ],
-  controllers: [AppController],
 })
 export class AppModule {}
 ```
 
-### Step 4: Application Bootstrap
-
-Configure your Fastify application for optimal performance:
+### 5. Protect Routes
 
 ```typescript
-// main.ts
-import { NestFactory } from '@nestjs/core';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import { AppModule } from './app.module';
+// app.controller.ts
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { AuthGuard, Session, UserSession } from 'nestjs-better-auth-fastify';
 
-async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule,
-    new FastifyAdapter({
-      logger: true,
-      maxParamLength: 100,
-      bodyLimit: 1048576, // 1MB
-    })
-  );
-
-  // Enable trust proxy for production
-  await app.register(import('@fastify/helmet'));
-
-  await app.listen(3000, '0.0.0.0');
-  console.log('🚀 Authentication server running on http://localhost:3000');
+@Controller()
+export class AppController {
+  @Get('profile')
+  @UseGuards(AuthGuard)
+  getProfile(@Session() session: UserSession) {
+    return { user: session.user };
+  }
 }
-bootstrap();
+```
+
+✅ **Done!** Your authentication is ready. See [Configuration](#configuration) for customization options or [Advanced Setup](#advanced-setup) for production-ready configuration.
+
+## Configuration
+
+### Module Options
+
+Configure the AuthModule with these options:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `auth` | `Auth` | *required* | Better Auth instance created with `betterAuth()` |
+| `isGlobal` | `boolean` | `true` | Make the module globally available |
+| `disableExceptionFilter` | `boolean` | `false` | Disable the built-in exception filter for authentication errors |
+| `disableGlobalAuthGuard` | `boolean` | `false` | Disable the automatic global auth guard |
+| `disableTrustedOriginsCors` | `boolean` | `false` | Disable automatic CORS handling for trusted origins |
+
+### Static Configuration with `forRoot()`
+
+For static configuration without async dependencies:
+
+```typescript
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { AuthModule } from 'nestjs-better-auth-fastify';
+import { auth } from './auth.config';
+
+@Module({
+  imports: [
+    AuthModule.forRoot({
+      auth,
+      isGlobal: true,                   // Make module global (default)
+      disableExceptionFilter: false,    // Enable exception filter (default)
+      disableGlobalAuthGuard: false,    // Enable global auth guard (default)
+      disableTrustedOriginsCors: false, // Enable trusted origins CORS (default)
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### Async Configuration with `forRootAsync()`
+
+For dynamic configuration using environment variables:
+
+```typescript
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AuthModule } from 'nestjs-better-auth-fastify';
+import { betterAuth } from 'better-auth';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { setupDatabase } from './database.config';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    AuthModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (config: ConfigService) => {
+        const db = await setupDatabase(config);
+
+        return {
+          auth: betterAuth({
+            database: drizzleAdapter(db, {
+              provider: config.get('DB_PROVIDER', 'pg'),
+            }),
+            secret: config.getOrThrow('AUTH_SECRET'),
+            baseURL: config.get('BASE_URL', 'http://localhost:3000'),
+            trustedOrigins: config.get('TRUSTED_ORIGINS', '').split(','),
+            emailAndPassword: {
+              enabled: config.get('AUTH_EMAIL_PASSWORD', 'true') === 'true',
+            },
+            session: {
+              expiresIn: parseInt(config.get('AUTH_SESSION_EXPIRES', '604800')),
+            },
+          }),
+          disableExceptionFilter: config.get('NODE_ENV') === 'test',
+          disableTrustedOriginsCors: config.get('AUTH_DISABLE_CORS') === 'true',
+        };
+      },
+      inject: [ConfigService],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### Environment Variables
+
+Recommended `.env` configuration:
+
+```bash
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/myapp
+DB_PROVIDER=pg
+
+# Authentication
+AUTH_SECRET=your-secret-key-min-32-chars
+BASE_URL=http://localhost:3000
+TRUSTED_ORIGINS=http://localhost:3000,https://yourdomain.com
+
+# Features
+AUTH_EMAIL_PASSWORD=true
+AUTH_SESSION_EXPIRES=604800
 ```
 
 ## Usage Guide
@@ -316,7 +309,12 @@ import { AuthModule, AuthGuard } from 'nestjs-better-auth-fastify';
 import { authInstance } from './auth.config';
 
 @Module({
-  imports: [AuthModule.forRoot(authInstance)],
+  imports: [
+    AuthModule.forRoot({
+      auth: authInstance,
+      disableGlobalAuthGuard: true, // Disable global guard to manually apply
+    }),
+  ],
   providers: [
     {
       provide: APP_GUARD,
@@ -334,9 +332,9 @@ export class AppModule {}
 
 Control authentication requirements with powerful decorators:
 
-#### @Session() - Session Access
+#### @Session() - Extract User Data
 
-Extract authenticated user information in your route handlers:
+Get type-safe access to authenticated user with full IntelliSense support:
 
 ```typescript
 import { Controller, Get } from '@nestjs/common';
@@ -345,123 +343,170 @@ import { Session, UserSession } from 'nestjs-better-auth-fastify';
 @Controller('api/user')
 export class UserController {
   @Get('profile')
-  async getCurrentProfile(@Session() userSession: UserSession) {
+  async getCurrentProfile(@Session() session: UserSession) {
     return {
-      id: userSession.user.id,
-      email: userSession.user.email,
-      metadata: userSession.session,
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      sessionExpiry: session.session.expiresAt
     };
+  }
+
+  // Destructuring for cleaner code
+  @Get('feed')
+  async getFeed(@Session() { user }: UserSession) {
+    return this.feedService.getPersonalizedFeed(user.id);
   }
 }
 ```
 
-#### @Public() - Public Access
+#### @Public() - Skip Authentication
 
-Mark specific routes as publicly accessible:
+Make routes publicly accessible with **zero performance overhead**:
 
 ```typescript
-import { Controller, Get, Post } from '@nestjs/common';
-import { Public, Session, UserSession } from 'nestjs-better-auth-fastify';
+import { Controller, Get } from '@nestjs/common';
+import { Public } from 'nestjs-better-auth-fastify';
 
-@Controller('api/content')
-export class ContentController {
-  @Get('public')
+@Controller('api')
+export class PublicController {
   @Public()
-  getPublicContent() {
-    return { message: 'Available to everyone' };
+  @Get('health')
+  getHealth() {
+    return { status: 'ok', uptime: process.uptime() };
   }
 
-  @Get('mixed')
   @Public()
-  getMixedContent(@Session() user?: UserSession) {
-    return {
-      message: 'Content for everyone',
-      personalized: user ? `Welcome back, ${user.user.name}` : null,
-    };
+  @Get('posts')
+  getPosts() {
+    return this.postsService.findAll();
   }
 }
 ```
 
-#### @Optional() - Flexible Authentication
+#### @Optional() - Adaptive User Experience
 
-Enable optional authentication for enhanced user experience:
+Build experiences that work for everyone - logged in or anonymous:
 
 ```typescript
 import { Controller, Get } from '@nestjs/common';
 import { Optional, Session, UserSession } from 'nestjs-better-auth-fastify';
 
-@Controller('api/recommendations')
+@Controller('api')
 @Optional()
-export class RecommendationsController {
-  @Get()
-  getRecommendations(@Session() user?: UserSession) {
-    if (user) {
-      return this.getPersonalizedRecommendations(user.user.id);
+export class AdaptiveController {
+  // E-commerce personalization
+  @Get('products')
+  getProducts(@Session() session?: UserSession) {
+    if (session?.user) {
+      return this.getRecommendedProducts(session.user.id);
     }
-    return this.getGeneralRecommendations();
+    return this.getBestSellers();
   }
 
-  private getPersonalizedRecommendations(userId: string) {
-    // Personalized logic
-  }
-
-  private getGeneralRecommendations() {
-    // General logic
+  // Smart dashboard
+  @Get('dashboard')
+  getDashboard(@Session() session?: UserSession) {
+    return {
+      welcome: session?.user
+        ? `Welcome back, ${session.user.name}!`
+        : 'Welcome! Sign in for personalized content.',
+      data: session ? this.getUserData(session.user.id) : this.getPublicData()
+    };
   }
 }
 ```
 
 ### Lifecycle Hooks
 
-Implement custom authentication lifecycle management with dependency injection:
+Build enterprise-grade authentication flows with dependency injection:
 
 ```typescript
-// auth/lifecycle.service.ts
-import { Injectable, Logger } from '@nestjs/common';
+// auth/security-hooks.service.ts
+import { Injectable } from '@nestjs/common';
 import {
   Hook,
   BeforeHook,
   AfterHook,
   AuthHookContext
 } from 'nestjs-better-auth-fastify';
-import { UserService } from '../user/user.service';
-import { AnalyticsService } from '../analytics/analytics.service';
 
 @Hook()
 @Injectable()
-export class AuthenticationLifecycle {
-  private readonly logger = new Logger(AuthenticationLifecycle.name);
-
+export class SecurityHooks {
   constructor(
-    private readonly userService: UserService,
+    private readonly rateLimiter: RateLimiterService,
+    private readonly blocklist: BlocklistService,
+    private readonly emailService: EmailService,
     private readonly analytics: AnalyticsService,
+    private readonly crm: CRMService
   ) {}
 
+  // Prevent brute-force attacks
+  @BeforeHook('/sign-in/email')
+  async preventBruteForce(ctx: AuthHookContext) {
+    const isAllowed = await this.rateLimiter.check(ctx.request.ip, {
+      max: 5,
+      window: '15m'
+    });
+
+    if (!isAllowed) {
+      throw new Error('Too many sign-in attempts. Try again in 15 minutes.');
+    }
+  }
+
+  // Block disposable emails
   @BeforeHook('/sign-up/email')
-  async validateSignUp(context: AuthHookContext) {
-    const { email } = context.body;
+  async validateEmail(ctx: AuthHookContext) {
+    const { email } = ctx.body;
+    const domain = email.split('@')[1];
 
-    // Custom validation logic
-    if (await this.userService.isEmailBlacklisted(email)) {
-      throw new Error('Email domain not allowed');
+    if (await this.blocklist.isDisposable(domain)) {
+      throw new Error('Disposable email addresses are not allowed');
     }
-
-    this.logger.log(`Sign-up validation passed for: ${email}`);
   }
 
+  // Welcome new users with complete onboarding
+  @AfterHook('/sign-up/email')
+  async welcomeNewUser(ctx: AuthHookContext) {
+    const user = ctx.user!;
+
+    // Send welcome email
+    await this.emailService.sendTemplate('welcome', {
+      to: user.email,
+      name: user.name,
+      verificationLink: await this.generateVerificationLink(user.id)
+    });
+
+    // Track conversion
+    await this.analytics.track('user_signed_up', {
+      userId: user.id,
+      source: ctx.request.headers.referer
+    });
+
+    // Sync to CRM
+    await this.crm.createContact({
+      email: user.email,
+      name: user.name,
+      signupDate: new Date()
+    });
+  }
+
+  // Track user activity and send security alerts
   @AfterHook('/sign-in/email')
-  async trackSignIn(context: AuthHookContext) {
-    const userId = context.user?.id;
-    if (userId) {
-      await this.analytics.trackEvent('user_signed_in', { userId });
-      await this.userService.updateLastLogin(userId);
-    }
-  }
+  async trackSignIn(ctx: AuthHookContext) {
+    const user = ctx.user!;
 
-  @BeforeHook('/sign-out')
-  async beforeSignOut(context: AuthHookContext) {
-    // Cleanup user sessions, invalidate tokens, etc.
-    this.logger.log('User signing out, performing cleanup');
+    // Update last login
+    await this.userService.updateLastLogin(user.id, {
+      ip: ctx.request.ip,
+      userAgent: ctx.request.headers['user-agent']
+    });
+
+    // Security notification for new device
+    if (await this.isNewDevice(user.id, ctx.request)) {
+      await this.emailService.sendSecurityAlert(user.email);
+    }
   }
 }
 ```
@@ -471,11 +516,18 @@ Register lifecycle hooks in your module:
 ```typescript
 // app.module.ts
 @Module({
-  imports: [AuthModule.forRoot(authInstance)],
+  imports: [
+    AuthModule.forRoot({
+      auth: authInstance,
+    }),
+  ],
   providers: [
-    AuthenticationLifecycle,
-    UserService,
+    SecurityHooks,
+    RateLimiterService,
+    BlocklistService,
+    EmailService,
     AnalyticsService,
+    CRMService
   ],
 })
 export class AppModule {}
@@ -565,133 +617,152 @@ export class ContextController {
 - `req.user` - Direct reference to authenticated user object
 - Standard Fastify request properties for enhanced observability
 
-## Performance
+## Common Use Cases
 
-### Fastify Advantages
+Real-world patterns for production applications.
 
-This library leverages Fastify's performance benefits for authentication:
+### E-Commerce with Personalization
 
-| Feature | Benefit | Impact |
-|---------|---------|--------|
-| **Async/Await Native** | Better Auth operations use modern async patterns | 20-30% faster request processing |
-| **Schema Validation** | Built-in request/response validation | Reduced validation overhead |
-| **Connection Pooling** | Optimized database connections | Higher concurrent user support |
-| **Memory Efficiency** | Lower memory footprint than Express | Better resource utilization |
+Deliver personalized shopping experiences:
 
-### Performance Tips
-
-1. **Connection Pool Optimization**:
 ```typescript
-const pool = new Pool({
-  max: 20, // Adjust based on your load
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
-```
+import { Controller, Get } from '@nestjs/common';
+import { Optional, Session, UserSession } from 'nestjs-better-auth-fastify';
 
-2. **Session Caching**:
-```typescript
-session: {
-  cookieCache: {
-    enabled: true,
-    maxAge: 5 * 60, // Cache for 5 minutes
+@Controller('api')
+@Optional()
+export class ProductsController {
+  @Get('products')
+  getProducts(@Session() session?: UserSession) {
+    if (session?.user) {
+      // Personalized based on purchase history
+      return this.getRecommendedProducts(session.user.id);
+    }
+    // Best sellers for anonymous users
+    return this.getBestSellers();
+  }
+
+  @Get('cart')
+  getCart(@Session() session?: UserSession) {
+    return session?.user
+      ? this.getUserCart(session.user.id)
+      : this.getGuestCart();
   }
 }
 ```
 
-3. **Production Settings**:
+### Role-Based Access Control
+
+Implement granular permissions:
+
 ```typescript
-// main.ts
-const app = await NestFactory.create<NestFastifyApplication>(
-  AppModule,
-  new FastifyAdapter({
-    logger: false, // Disable in production
-    disableRequestLogging: true,
-  })
-);
+import { Controller, Get, UseGuards, ForbiddenException } from '@nestjs/common';
+import { AuthGuard, Session, UserSession } from 'nestjs-better-auth-fastify';
+
+@Controller('admin')
+@UseGuards(AuthGuard)
+export class AdminController {
+  @Get('dashboard')
+  getDashboard(@Session() { user }: UserSession) {
+    if (user.role !== 'admin') {
+      throw new ForbiddenException('Admin access required');
+    }
+    return this.getAdminDashboard();
+  }
+
+  @Get('users')
+  getUsers(@Session() { user }: UserSession) {
+    if (!['admin', 'moderator'].includes(user.role)) {
+      throw new ForbiddenException('Insufficient permissions');
+    }
+    return this.userService.findAll();
+  }
+}
 ```
 
-## Configuration
+### Security & Rate Limiting
 
-### Asynchronous Setup with `forRootAsync()`
-
-Configure authentication dynamically using environment variables and async configuration:
+Prevent abuse with enterprise-grade protection:
 
 ```typescript
-// config/auth.config.ts
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthModule } from 'nestjs-better-auth-fastify';
-import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { setupDatabase } from './database.config';
+@Hook()
+@Injectable()
+export class SecurityHooks {
+  constructor(private rateLimiter: RateLimiterService) {}
 
-@Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    AuthModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: async (config: ConfigService) => {
-        // Dynamic database setup
-        const db = await setupDatabase(config);
+  @BeforeHook('/sign-in/email')
+  async preventBruteForce(ctx: AuthHookContext) {
+    const isAllowed = await this.rateLimiter.check(ctx.request.ip, {
+      max: 5,
+      window: '15m',
+    });
 
-        const authInstance = betterAuth({
-          database: drizzleAdapter(db, {
-            provider: config.get('DB_PROVIDER'),
-            usePlural: true,
-          }),
-          secret: config.getOrThrow('AUTH_SECRET'),
-          baseURL: config.get('BASE_URL', 'http://localhost:3000'),
-          trustedOrigins: config.get('TRUSTED_ORIGINS', '').split(','),
-          emailAndPassword: {
-            enabled: config.get('AUTH_EMAIL_PASSWORD', 'true') === 'true',
-            requireEmailVerification: config.get('AUTH_REQUIRE_EMAIL_VERIFICATION', 'false') === 'true',
-          },
-          session: {
-            expiresIn: parseInt(config.get('AUTH_SESSION_EXPIRES', '604800')), // 7 days
-            updateAge: parseInt(config.get('AUTH_SESSION_UPDATE_AGE', '86400')), // 1 day
-          },
-        });
+    if (!isAllowed) {
+      throw new Error('Too many sign-in attempts. Try again in 15 minutes.');
+    }
+  }
 
-        return {
-        	auth: authInstance,
-          disableExceptionFilter: config.get('NODE_ENV') === 'test',  // Disable in test environment
-         	disableTrustedOriginsCors: config.get('AUTH_DISABLE_CORS', 'false') === 'true',
-        };
-      },
-      inject: [ConfigService],
-    }),
-  ],
+  @BeforeHook('/sign-up/email')
+  async blockDisposableEmails(ctx: AuthHookContext) {
+    const domain = ctx.body.email.split('@')[1];
+    if (await this.blocklist.isDisposable(domain)) {
+      throw new Error('Disposable email addresses not allowed');
+    }
+  }
+}
+```
+
+## Advanced Setup
+
+Production-ready configuration with optimizations.
+
+### Database Schema
+
+Complete Better Auth schema:
+
+```typescript
+import * as t from 'drizzle-orm/pg-core';
+
+export const users = t.pgTable('users', {
+  id: t.text().primaryKey(),
+  email: t.text().notNull().unique(),
+  name: t.text().notNull(),
+  // ... other fields
+});
+
+export const sessions = t.pgTable('sessions', {
+  id: t.text().primaryKey(),
+  userId: t.text().notNull().references(() => users.id, { onDelete: 'cascade' }),
+  // ... other fields
+});
+```
+
+See [Better Auth Documentation](https://www.better-auth.com/docs/concepts/database) for complete schema.
+
+### Performance Optimization
+
+```typescript
+// Optimized connection pool
+const pool = new Pool({
+  max: 20,                     // Adjust for your load
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
+
+// Session caching
+session: {
+  cookieCache: {
+    enabled: true,
+    maxAge: 5 * 60,            // 5 minutes
+  }
+}
+
+// Production Fastify settings
+new FastifyAdapter({
+  logger: false,
+  disableRequestLogging: true,
 })
-export class AuthConfigModule {}
 ```
-
-### Synchronous Setup with `forRoot()`
-
-For static configuration without async dependencies:
-
-```typescript
-// app.module.ts
-import { Module } from '@nestjs/common';
-import { AuthModule } from 'nestjs-better-auth-fastify';
-import { authInstance } from './auth.config';
-
-@Module({
-  imports: [
-    AuthModule.forRoot(authInstance, {
-      disableExceptionFilter: false,    // Enable exception filter (default)
-      disableTrustedOriginsCors: false  // Enable trusted origins CORS (default)
-    }),
-  ],
-})
-export class AppModule {}
-```
-
-### Module Configuration Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `disableExceptionFilter` | `boolean` | `false` | Disable the built-in exception filter for authentication errors |
-| `disableTrustedOriginsCors` | `boolean` | `false` | Disable automatic CORS handling for trusted origins |
 
 ## API Reference
 
