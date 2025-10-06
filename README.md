@@ -238,7 +238,7 @@ import { setupDatabase } from './database.config';
             baseURL: config.get('BASE_URL', 'http://localhost:3000'),
             trustedOrigins: config.get('TRUSTED_ORIGINS', '').split(','),
             emailAndPassword: {
-              enabled: config.get('AUTH_EMAIL_PASSWORD', 'true') === 'true',
+              enabled: true,
             },
             session: {
               expiresIn: parseInt(config.get('AUTH_SESSION_EXPIRES', '604800')),
@@ -270,7 +270,6 @@ BASE_URL=http://localhost:3000
 TRUSTED_ORIGINS=http://localhost:3000,https://yourdomain.com
 
 # Features
-AUTH_EMAIL_PASSWORD=true
 AUTH_SESSION_EXPIRES=604800
 ```
 
