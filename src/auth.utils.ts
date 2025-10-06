@@ -2,8 +2,6 @@ import type { ExecutionContext } from '@nestjs/common';
 import type { GqlContextType } from '@nestjs/graphql';
 import type { FastifyRequest } from 'fastify';
 
-import { GqlExecutionContext } from '@nestjs/graphql';
-
 /**
  * **Universal request extractor** - Get FastifyRequest from any context
  *
@@ -68,7 +66,17 @@ export function extractRequestFromExecutionContext(context: ExecutionContext): F
 	const contextType = context.getType<GqlContextType>();
 
 	if (contextType === 'graphql') {
-		return GqlExecutionContext.create(context).getContext<{ req: FastifyRequest }>().req;
+		// Dynamic import to make @nestjs/graphql optional
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-require-imports
+			const { GqlExecutionContext } = require('@nestjs/graphql');
+			const gqlContext = GqlExecutionContext.create(context).getContext();
+			return (gqlContext as { req: FastifyRequest }).req;
+		} catch {
+			throw new Error(
+				'@nestjs/graphql must be installed to use GraphQL context. Install it with: npm install @nestjs/graphql',
+			);
+		}
 	}
 
 	if (contextType === 'ws') {
