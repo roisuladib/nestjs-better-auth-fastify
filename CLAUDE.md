@@ -142,6 +142,8 @@ The module uses NestJS's `ConfigurableModuleBuilder` for enhanced type safety an
 - `User` - Extracted from UserSession
 - `AuthSession` - Session metadata
 - `AuthHookContext` - Inferred from Better Auth middleware
+- `PluginEndpoints<T>` - Helper to extract endpoints from Better Auth plugins
+- `AuthWithPlugins<T>` - Generic interface for composing Better Auth with custom plugin endpoints
 - `AuthWithOpenAPI` - Internal default type with openAPI plugin (used as AuthService default generic)
 - `OpenAPIEndpoints` - Type for openAPI plugin endpoints
 
@@ -149,29 +151,32 @@ The module uses NestJS's `ConfigurableModuleBuilder` for enhanced type safety an
 - Use Better Auth's types as source of truth
 - Infer types from Better Auth APIs (no duplication)
 - Generic `AuthService<T extends AuthWithOpenAPI = AuthWithOpenAPI>` with openAPI by default
-- Users define custom types using `Auth` as base for additional plugins
+- Users define custom types using `AuthWithPlugins<T>` + `PluginEndpoints<T>` for clean type composition
 
 **Plugin Type Handling**:
 - **Default Behavior**: `AuthService` automatically includes **openAPI plugin methods** out of the box (via `AuthWithOpenAPI` default generic)
-- **Custom plugins**: Users must manually define type matching ALL installed plugins (including openAPI):
+- **Custom plugins**: Use `PluginEndpoints<T>` helper with `AuthWithPlugins<T>` for type-safe plugin composition:
   ```typescript
-  import type { Auth } from 'better-auth';
-  import type { twoFactor, phoneNumber, admin, openAPI } from 'better-auth/plugins';
+  import type { twoFactor, phoneNumber, admin } from 'better-auth/plugins';
   import type { AdminOptions } from 'better-auth/plugins/admin';
+  import type { AuthWithPlugins, PluginEndpoints } from 'nestjs-better-auth-fastify';
 
-  export type CustomAuth = Auth & {
-    api: Auth['api']
-      & ReturnType<typeof openAPI>['endpoints']         // Include for docs generation
-      & ReturnType<typeof twoFactor>['endpoints']
-      & ReturnType<typeof phoneNumber>['endpoints']
-      & ReturnType<typeof admin<AdminOptions>>['endpoints'];
-  };
+  // Single plugin - clean syntax
+  interface MyAuth extends AuthWithPlugins<PluginEndpoints<typeof twoFactor>> {}
+
+  // Multiple plugins - combine with intersection
+  interface MyAuth extends AuthWithPlugins<
+    PluginEndpoints<typeof twoFactor> &
+    PluginEndpoints<typeof phoneNumber> &
+    PluginEndpoints<typeof admin<AdminOptions>>
+  > {}
 
   // Use in services
-  constructor(private authService: AuthService<CustomAuth>) {}
+  constructor(private authService: AuthService<MyAuth>) {}
   ```
+- **Type Safety**: `AuthWithPlugins<T>` automatically includes `OpenAPIEndpoints` for documentation generation
+- **Helper Utility**: `PluginEndpoints<T>` eliminates verbose `ReturnType<typeof plugin>['endpoints']` pattern
 - **Important**: No automatic type inference from runtime plugins due to TypeScript + DI limitations
-- **Note**: Always include openAPI in custom type definitions to maintain documentation generation capabilities
 
 ### Multi-Context Support
 

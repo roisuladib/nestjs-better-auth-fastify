@@ -146,12 +146,84 @@ export interface AuthConfigProvider {
  * **OpenAPI Plugin Endpoints** - Type definition for openAPI plugin endpoints
  *
  * Extracts endpoint types from Better Auth's openAPI plugin.
- * Used as default plugin for AuthWithOpenAPI.
+ * Used as default plugin for InferAuth and AuthWithOpenAPI.
  */
 export type OpenAPIEndpoints = ReturnType<typeof openAPI>['endpoints'];
 
 /**
- * **Auth with OpenAPI** - Internal default type for AuthService
+ * **Plugin Endpoints** - Helper type to extract endpoints from Better Auth plugins
+ *
+ * **Purpose**: Simplify plugin endpoint type extraction by handling the verbose ReturnType pattern.
+ *
+ * @template T - Better Auth plugin function type
+ *
+ * @example
+ * ```typescript
+ * import type { twoFactor } from 'better-auth/plugins';
+ *
+ * // Instead of: ReturnType<typeof twoFactor>['endpoints']
+ * type TwoFactorEndpoints = PluginEndpoints<typeof twoFactor>;
+ * ```
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Generic utility type requires any for maximum flexibility
+export type PluginEndpoints<T> = T extends (...args: any[]) => { endpoints: infer E } ? E : never;
+
+/**
+ * **Auth with Plugins** - Generic interface for composing Better Auth with custom plugin endpoints
+ *
+ * **Purpose**: Create type-safe Better Auth instances with any combination of plugins.
+ *
+ * @template T - Additional plugin endpoints to merge with base Auth API
+ *
+ * **Type Safety**: Always includes OpenAPIEndpoints by default for documentation generation.
+ *
+ * **Generic Parameter**: Pass plugin endpoint types to extend the base Auth API:
+ * - Use `PluginEndpoints<typeof pluginName>` helper for cleaner syntax
+ * - Use intersection (`&`) to combine multiple plugins
+ *
+ * @example
+ * ```typescript
+ * // ✅ Single plugin - twoFactor
+ * import type { twoFactor } from 'better-auth/plugins';
+ *
+ * interface MyAuth extends AuthWithPlugins<PluginEndpoints<typeof twoFactor>> {}
+ *
+ * @Injectable()
+ * export class MyService {
+ *   constructor(private authService: AuthService<MyAuth>) {}
+ *   // authService.api has openAPI + twoFactor methods
+ * }
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // ✅ Multiple plugins - combine with intersection
+ * import type { twoFactor, phoneNumber, admin } from 'better-auth/plugins';
+ * import type { AdminOptions } from 'better-auth/plugins/admin';
+ *
+ * interface MyAuth extends AuthWithPlugins<
+ *   PluginEndpoints<typeof twoFactor> &
+ *   PluginEndpoints<typeof phoneNumber> &
+ *   PluginEndpoints<typeof admin<AdminOptions>>
+ * > {}
+ *
+ * @Injectable()
+ * export class MyService {
+ *   constructor(private authService: AuthService<MyAuth>) {}
+ *   // authService.api has openAPI + twoFactor + phoneNumber + admin methods
+ * }
+ * ```
+ *
+ * @see {@link PluginEndpoints} for simplified endpoint extraction
+ * @see {@link AuthService} for usage in dependency injection
+ * @see {@link AuthWithOpenAPI} for the default type with only openAPI plugin
+ */
+export interface AuthWithPlugins<T = Record<string, never>> extends Auth {
+	api: Auth['api'] & OpenAPIEndpoints & T;
+}
+
+/**
+ * **Auth with OpenAPI** - Default type for AuthService (openAPI plugin only)
  *
  * **⚠️ Internal Type**: This is the default generic type for AuthService.
  * You typically don't need to use this directly.
@@ -161,7 +233,7 @@ export type OpenAPIEndpoints = ReturnType<typeof openAPI>['endpoints'];
  *
  * **Default behavior**: AuthService uses this type automatically when no generic is specified.
  *
- * **For custom plugins**: Define your own type using `Auth` as base (not this type).
+ * **For custom plugins**: Use {@link AuthWithPlugins} generic interface instead.
  *
  * @example
  * ```typescript
@@ -175,29 +247,18 @@ export type OpenAPIEndpoints = ReturnType<typeof openAPI>['endpoints'];
  *
  * @example
  * ```typescript
- * // ✅ Custom plugins - use Auth as base, not AuthWithOpenAPI
- * import type { Auth } from 'better-auth';
- * import type { twoFactor, phoneNumber, admin, openAPI } from 'better-auth/plugins';
- * import type { AdminOptions } from 'better-auth/plugins/admin';
+ * // ✅ Custom plugins - use AuthWithPlugins instead
+ * import type { twoFactor } from 'better-auth/plugins';
  *
- * // Define type matching ALL your plugins
- * export type CustomAuth = Auth & {
- *   api: Auth['api']
- *     & ReturnType<typeof openAPI>['endpoints']
- *     & ReturnType<typeof twoFactor>['endpoints']
- *     & ReturnType<typeof phoneNumber>['endpoints']
- *     & ReturnType<typeof admin<AdminOptions>>['endpoints'];
- * };
+ * interface MyAuth extends AuthWithPlugins<PluginEndpoints<typeof twoFactor>> {}
  *
- * // Use custom type in services
  * @Injectable()
  * export class MyService {
- *   constructor(private authService: AuthService<CustomAuth>) {}
+ *   constructor(private authService: AuthService<MyAuth>) {}
  * }
  * ```
  *
+ * @see {@link AuthWithPlugins} for custom plugin type composition
  * @see {@link AuthService} for usage in dependency injection
  */
-export interface AuthWithOpenAPI extends Auth {
-	api: Auth['api'] & OpenAPIEndpoints;
-}
+export interface AuthWithOpenAPI extends AuthWithPlugins {}
