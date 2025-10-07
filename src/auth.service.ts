@@ -41,25 +41,25 @@ import { AUTH_MODULE_OPTIONS } from './auth.symbols';
  *
  * @example
  * ```typescript
- * // Custom plugins - manual type definition required
- * // Note: Include openAPI explicitly when defining custom types
- * import type { Auth } from 'better-auth';
- * import type { twoFactor, phoneNumber, admin, openAPI } from 'better-auth/plugins';
+ * // Custom plugins - use AuthWithPlugins and PluginEndpoints
+ * import type { twoFactor, phoneNumber, admin } from 'better-auth/plugins';
  * import type { AdminOptions } from 'better-auth/plugins/admin';
+ * import type { AuthWithPlugins, PluginEndpoints } from 'nestjs-better-auth-fastify';
  *
- * // Define type matching ALL your plugins (in types/custom-auth.types.ts)
- * export type CustomAuth = Auth & {
- *   api: Auth['api']
- *     & ReturnType<typeof openAPI>['endpoints']       // Include openAPI
- *     & ReturnType<typeof twoFactor>['endpoints']
- *     & ReturnType<typeof phoneNumber>['endpoints']
- *     & ReturnType<typeof admin<AdminOptions>>['endpoints'];
- * };
+ * // Single plugin - clean syntax (in types/custom-auth.types.ts)
+ * interface MyAuth extends AuthWithPlugins<PluginEndpoints<typeof twoFactor>> {}
+ *
+ * // Multiple plugins - combine with intersection
+ * interface MyAuthMultiple extends AuthWithPlugins<
+ *   PluginEndpoints<typeof twoFactor> &
+ *   PluginEndpoints<typeof phoneNumber> &
+ *   PluginEndpoints<typeof admin<AdminOptions>>
+ * > {}
  *
  * // Use custom type in services
  * @Injectable()
  * export class UserService {
- *   constructor(private authService: AuthService<CustomAuth>) {}
+ *   constructor(private authService: AuthService<MyAuthMultiple>) {}
  *
  *   async sendOTP(phoneNumber: string) {
  *     // Type-safe access to ALL plugin methods
