@@ -77,8 +77,8 @@ describe('AuthService', () => {
 	});
 
 	describe('Type safety', () => {
-		it('should support custom auth instance types', async () => {
-			interface CustomAuth extends Auth {
+		it('should support custom auth instance types with AuthWithPlugins', async () => {
+			interface MyCustomAuth extends Auth {
 				customMethod?: () => void;
 			}
 
@@ -103,7 +103,7 @@ describe('AuthService', () => {
 				],
 			}).compile();
 
-			const customService = module.get<AuthService<CustomAuth>>(AuthService);
+			const customService = module.get<AuthService<MyCustomAuth>>(AuthService);
 			expect(customService.instance.customMethod).toBeDefined();
 		});
 	});
