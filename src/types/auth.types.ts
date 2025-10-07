@@ -146,7 +146,7 @@ export interface AuthConfigProvider {
  * **OpenAPI Plugin Endpoints** - Type definition for openAPI plugin endpoints
  *
  * Extracts endpoint types from Better Auth's openAPI plugin.
- * Used as default plugin for InferAuth and AuthWithOpenAPI.
+ * Used as default plugin for AuthWithPlugins and AuthWithOpenAPI.
  */
 export type OpenAPIEndpoints = ReturnType<typeof openAPI>['endpoints'];
 
