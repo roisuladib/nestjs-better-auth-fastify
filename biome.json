@@ -22,6 +22,9 @@
 			}
 		}
 	},
+	"files": {
+		"includes": ["**", "!**/*.test.ts", "!test"]
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {
