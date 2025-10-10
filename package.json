@@ -1,7 +1,7 @@
 {
 	"name": "nestjs-better-auth-fastify",
 	"description": "NestJS Better Auth Module for fastify adapter",
-	"version": "0.0.20",
+	"version": "0.0.21",
 	"files": [
 		"dist"
 	],
