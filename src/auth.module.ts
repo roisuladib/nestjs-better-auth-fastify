@@ -98,6 +98,7 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 	}
 
 	onModuleInit(): void {
+		this.logger.log('🚀 NestJS Better Auth module initialized');
 		this.setupHooks();
 	}
 
@@ -263,6 +264,59 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 	}
 
 	/**
+	 * Log all available Better Auth routes for debugging and verification
+	 */
+	private logAvailableRoutes(basePath: string): void {
+		try {
+			// Get all API endpoints from Better Auth instance
+			const api = this.options.auth.api;
+			const endpoints = Object.keys(api).filter(
+				key => typeof api[key as keyof typeof api] === 'function',
+			) as (keyof typeof api)[];
+
+			if (endpoints.length > 0) {
+				this.logger.log(`📋 Available Better Auth endpoints (${endpoints.length}):`);
+
+				// Group endpoints for better readability
+				const authEndpoints = endpoints.filter(
+					e => e.includes('signIn') || e.includes('signUp') || e.includes('signOut'),
+				);
+				const sessionEndpoints = endpoints.filter(
+					e => e.includes('session') || e.includes('Session'),
+				);
+				const accountEndpoints = endpoints.filter(
+					e => e.includes('account') || e.includes('user') || e.includes('User'),
+				);
+				const otherEndpoints = endpoints.filter(
+					e =>
+						!authEndpoints.includes(e) &&
+						!sessionEndpoints.includes(e) &&
+						!accountEndpoints.includes(e),
+				);
+
+				if (authEndpoints.length > 0) {
+					this.logger.log(`  🔐 Auth: ${authEndpoints.join(', ')}`);
+				}
+				if (sessionEndpoints.length > 0) {
+					this.logger.log(`  🎫 Session: ${sessionEndpoints.join(', ')}`);
+				}
+				if (accountEndpoints.length > 0) {
+					this.logger.log(`  👤 Account: ${accountEndpoints.join(', ')}`);
+				}
+				if (otherEndpoints.length > 0) {
+					this.logger.log(`  🔧 Other: ${otherEndpoints.join(', ')}`);
+				}
+
+				this.logger.log(`  📍 Base path: ${basePath}`);
+			} else {
+				this.logger.warn('No Better Auth endpoints detected');
+			}
+		} catch {
+			this.logger.warn('Could not enumerate Better Auth routes');
+		}
+	}
+
+	/**
 	 * Setup Better Auth handler as Fastify catch-all route
 	 * Follows Better Auth Fastify integration pattern with performance optimizations
 	 */
@@ -273,7 +327,12 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 		const basePath = this.options.auth.options.basePath ?? '/api/auth';
 		const normalizedPath = `/${basePath.replace(/^\/+|\/+$/g, '')}`;
 
+		// Log available Better Auth routes
+		this.logAvailableRoutes(normalizedPath);
+
 		// Register catch-all route for all auth endpoints
+		this.logger.log(`✅ Auth handler registered at: ${normalizedPath}/*`);
+
 		fastifyInstance.route({
 			method: ['GET', 'POST'],
 			url: `${normalizedPath}/*`,
@@ -281,6 +340,9 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 				const startTime = Date.now();
 
 				try {
+					// Log incoming auth request
+					this.logger.debug(`Incoming auth request: ${request.method} ${request.url}`);
+
 					// Convert Fastify request to Web API Request for Better Auth
 					const webRequest = this.convertToWebApiRequest(request);
 
@@ -305,6 +367,11 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 						// Log slow requests
 						this.logger.warn(
 							`Slow auth request: ${request.method} ${request.url} took ${duration}ms`,
+						);
+					} else {
+						// Log successful requests
+						this.logger.debug(
+							`✓ Auth request completed: ${request.method} ${request.url} (${duration}ms)`,
 						);
 					}
 				} catch (error) {
