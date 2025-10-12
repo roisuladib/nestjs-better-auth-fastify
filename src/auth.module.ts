@@ -1,4 +1,5 @@
-import type { DynamicModule, NestModule, OnModuleInit } from '@nestjs/common';
+/** biome-ignore-all lint/complexity/noThisInStatic: Allow super in forRoot and forRootAsync */
+import type { DynamicModule, MiddlewareConsumer, NestModule, OnModuleInit } from '@nestjs/common';
 import type { FastifyAdapter } from '@nestjs/platform-fastify';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { AuthModuleConfig } from './types';
@@ -92,7 +93,7 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 		super();
 	}
 
-	configure(): void {
+	configure(_consumer: MiddlewareConsumer): void {
 		this.setupCors();
 		this.setupHandler();
 	}
@@ -492,6 +493,8 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 	 * @example
 	 * ```typescript
 	 * import { betterAuth } from 'better-auth';
+import { AuthModule } from './modules/auth/auth.module';
+import { BetterAuthModule } from './modules/better-auth/better-auth.module';
 	 *
 	 * @Module({
 	 *   imports: [
@@ -507,7 +510,7 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 	 * ```
 	 */
 	static forRoot(options: typeof OPTIONS_TYPE): DynamicModule {
-		const forRootResult = ConfigurableModuleClass.forRoot(options);
+		const forRootResult = super.forRoot(options);
 
 		return {
 			...forRootResult,
@@ -551,7 +554,7 @@ export class AuthModule extends ConfigurableModuleClass implements NestModule, O
 	 * ```
 	 */
 	static forRootAsync(options: typeof ASYNC_OPTIONS_TYPE): DynamicModule {
-		const forRootAsyncResult = ConfigurableModuleClass.forRootAsync(options);
+		const forRootAsyncResult = super.forRootAsync(options);
 
 		return {
 			...forRootAsyncResult,

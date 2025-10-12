@@ -1,10 +1,11 @@
 import type { Auth } from 'better-auth';
+import type { AuthWithOpenAPI } from '../src/types';
 
+import { beforeEach, describe, expect, it, mock } from 'bun:test';
 import { Test } from '@nestjs/testing';
 
 import { AuthService } from '../src/auth.service';
 import { AUTH_MODULE_OPTIONS } from '../src/auth.symbols';
-import { beforeEach, describe, expect, it, mock } from 'bun:test';
 
 describe('AuthService', () => {
 	let service: AuthService;
@@ -78,7 +79,7 @@ describe('AuthService', () => {
 
 	describe('Type safety', () => {
 		it('should support custom auth instance types with AuthWithPlugins', async () => {
-			interface MyCustomAuth extends Auth {
+			interface MyCustomAuth extends AuthWithOpenAPI {
 				customMethod?: () => void;
 			}
 

@@ -2,21 +2,31 @@
 	"name": "nestjs-better-auth-fastify",
 	"description": "NestJS Better Auth Module for fastify adapter",
 	"version": "0.0.21",
+	"type": "module",
 	"files": [
 		"dist"
 	],
+	"main": "./dist/index.cjs",
 	"module": "./dist/index.mjs",
-	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
+			"require": "./dist/index.cjs",
 			"import": "./dist/index.mjs",
-			"require": "./dist/index.js"
+			"types": "./dist/index.d.ts"
 		},
 		"./package.json": "./package.json"
 	},
+	"keywords": [
+		"nestjs",
+		"better-auth",
+		"auth",
+		"nestjs-better-auth",
+		"nestjs-better-auth-fastify"
+	],
 	"scripts": {
-		"build": "bunup && tsc --emitDeclarationOnly",
-		"dev": "bunup --watch",
+		"build": "unbuild",
+		"dev": "unbuild --stub",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format .",
@@ -37,10 +47,10 @@
 		"@nestjs/testing": "^11.1.6",
 		"@types/bun": "^1.2.23",
 		"bumpp": "^10.3.1",
-		"bunup": "^0.14.19",
 		"fastify": "^5.6.1",
 		"simple-git-hooks": "^2.13.1",
-		"typescript": "^5.9.3"
+		"typescript": "^5.9.3",
+		"unbuild": "^3.6.1"
 	},
 	"peerDependencies": {
 		"@nestjs/common": "^11.0.0",

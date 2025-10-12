@@ -22,3 +22,6 @@ yarn-error.log*
 # IDE and editor settings
 .vscode
 .claude
+
+# Example folder (dev/testing only)
+example
