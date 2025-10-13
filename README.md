@@ -181,7 +181,7 @@ Configure the AuthModule with these options:
 | `auth` | `Auth` | *required* | Better Auth instance created with `betterAuth()` |
 | `isGlobal` | `boolean` | `true` | Make the module globally available |
 | `disableExceptionFilter` | `boolean` | `false` | Disable the built-in exception filter for authentication errors |
-| `disableGlobalAuthGuard` | `boolean` | `false` | Disable the automatic global auth guard |
+| `disableGlobalAuthGuard` | `boolean` | `false` | Disable the automatic global auth guard (auto-registered by default) |
 | `disableTrustedOriginsCors` | `boolean` | `false` | Disable automatic CORS handling for trusted origins |
 
 ### Static Configuration with `forRoot()`
@@ -297,35 +297,44 @@ export class ProtectedController {
 }
 ```
 
-#### Method 2: Application-Wide Protection
+#### Method 2: Application-Wide Protection (Default)
 
-Secure all routes by default using global guard registration:
+Secure all routes automatically - **AuthGuard is registered globally by default**:
 
 ```typescript
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { AuthModule, AuthGuard } from 'nestjs-better-auth-fastify';
-import { authInstance } from './auth.config';
+import { AuthModule } from 'nestjs-better-auth-fastify';
+import { auth } from './auth.config';
 
 @Module({
   imports: [
     AuthModule.forRoot({
-      auth: authInstance,
-      disableGlobalAuthGuard: true, // Disable global guard to manually apply
+      auth,
+      // disableGlobalAuthGuard: false  (default - guard auto-registered)
     }),
-  ],
-  providers: [
-    {
-      provide: APP_GUARD,
-      useClass: AuthGuard,
-    },
   ],
 })
 export class AppModule {}
 ```
 
+**Use `@Public()` to exempt specific routes:**
+
+```typescript
+import { Controller, Get } from '@nestjs/common';
+import { Public } from 'nestjs-better-auth-fastify';
+
+@Controller('public')
+export class PublicController {
+  @Public()
+  @Get('landing')
+  getLanding() {
+    return { welcome: 'No auth needed!' };
+  }
+}
+```
+
 > [!TIP]
-> Choose the approach that best fits your application's security model. Global protection with selective exemptions is often more secure.
+> Global protection with selective exemptions is more secure and is the default behavior. Use `disableGlobalAuthGuard: true` if you prefer manual guard registration.
 
 ### Access Control Decorators
 
@@ -615,6 +624,35 @@ export class ContextController {
 - `req.session` - Complete session object with authentication state
 - `req.user` - Direct reference to authenticated user object
 - Standard Fastify request properties for enhanced observability
+
+### Universal Request Extraction
+
+Extract Fastify request from any NestJS execution context:
+
+```typescript
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { extractRequestFromExecutionContext } from 'nestjs-better-auth-fastify';
+
+@Injectable()
+export class CustomGuard implements CanActivate {
+  async canActivate(context: ExecutionContext) {
+    // Works with HTTP, GraphQL, WebSocket, and RPC contexts
+    const request = extractRequestFromExecutionContext(context);
+
+    const ip = request.ip;
+    const user = request.user;
+
+    // Your custom logic
+    return true;
+  }
+}
+```
+
+**Supported Contexts:**
+- ✅ HTTP (REST APIs)
+- ✅ GraphQL (Apollo/Mercurius)
+- ✅ WebSocket (real-time connections)
+- ✅ RPC (microservices)
 
 ## Common Use Cases
 

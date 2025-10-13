@@ -87,6 +87,26 @@ The module uses NestJS's `ConfigurableModuleBuilder` for enhanced type safety an
 - `req.session` - Full session object with user and metadata
 - `req.user` - Direct user reference for observability (Sentry, logging)
 
+### Exception Handling
+
+**Global Exception Filter** (`auth.filter.ts`):
+- Catches Better Auth `APIError` exceptions
+- Converts to consistent HTTP JSON responses
+- Maps Better Auth error codes to HTTP status codes
+- Includes error code, message, timestamp, and request path
+- Auto-registered by default (disable with `disableExceptionFilter: true`)
+
+**Error Response Format**:
+```json
+{
+  "statusCode": 401,
+  "message": "Invalid credentials",
+  "error": "INVALID_CREDENTIALS",
+  "timestamp": "2025-01-15T10:30:00.000Z",
+  "path": "/api/auth/sign-in/email"
+}
+```
+
 ### Hook System Architecture
 
 **Discovery & Registration** (auth.module.ts:setupHooks):
@@ -141,10 +161,13 @@ The module uses NestJS's `ConfigurableModuleBuilder` for enhanced type safety an
 - `UserSession` - Inferred from Better Auth's `getSession` return type
 - `User` - Extracted from UserSession
 - `AuthSession` - Session metadata
-- `AuthHookContext` - Inferred from Better Auth middleware
+- `AuthHookContext` - Inferred from Better Auth middleware context
+- `AuthModuleConfig` - Module configuration with Better Auth instance
+- `AuthModuleFeatures` - Control flags (disable filters, guards, CORS)
+- `AuthConfigProvider` - Interface for class-based async configuration
 - `PluginEndpoints<T>` - Helper to extract endpoints from Better Auth plugins
 - `AuthWithPlugins<T>` - Generic interface for composing Better Auth with custom plugin endpoints
-- `AuthWithOpenAPI` - Internal default type with openAPI plugin (used as AuthService default generic)
+- `AuthWithOpenAPI` - Default type with openAPI plugin (used as AuthService default generic)
 - `OpenAPIEndpoints` - Type for openAPI plugin endpoints
 
 **Type Safety Strategy**:
@@ -178,6 +201,23 @@ The module uses NestJS's `ConfigurableModuleBuilder` for enhanced type safety an
 - **Helper Utility**: `PluginEndpoints<T>` eliminates verbose `ReturnType<typeof plugin>['endpoints']` pattern
 - **Important**: No automatic type inference from runtime plugins due to TypeScript + DI limitations
 
+### Decorators System
+
+**Access Control Decorators** (`auth.decorators.ts`):
+- `@Public()` - Skip authentication for public routes (zero overhead - early exit before session lookup)
+- `@Optional()` - Allow optional authentication (route works with or without session)
+- `@Session()` - Extract authenticated user session with full type safety
+
+**Lifecycle Hook Decorators** (`auth.decorators.ts`):
+- `@Hook()` - Mark class as authentication lifecycle handler (enables automatic discovery)
+- `@BeforeHook(path)` - Register pre-authentication handler (validation, rate limiting, blocking)
+- `@AfterHook(path)` - Register post-authentication handler (onboarding, notifications, tracking)
+
+**Hook Context**:
+- Type: `AuthHookContext` - Complete request/response access in authentication lifecycle
+- Available in both `@BeforeHook` and `@AfterHook` methods
+- Properties: `ctx.body`, `ctx.headers`, `ctx.request`, `ctx.user` (available in @AfterHook only)
+
 ### Multi-Context Support
 
 **Context Extraction** (`auth.utils.ts`):
@@ -185,6 +225,11 @@ The module uses NestJS's `ConfigurableModuleBuilder` for enhanced type safety an
 - GraphQL: `GqlExecutionContext.create(context).getContext().req`
 - WebSocket: `context.switchToWs().getClient().handshake`
 - RPC: `context.switchToRpc().getContext().request`
+
+**Universal Request Extractor**:
+- Function: `extractRequestFromExecutionContext(context)` - Get FastifyRequest from any NestJS execution context
+- Supports HTTP, GraphQL, WebSocket, and RPC contexts
+- Used internally by AuthGuard, but available for custom guards and interceptors
 
 ## Testing Patterns
 
