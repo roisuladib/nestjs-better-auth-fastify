@@ -637,7 +637,7 @@ import { extractRequestFromExecutionContext } from 'nestjs-better-auth-fastify';
 export class CustomGuard implements CanActivate {
   async canActivate(context: ExecutionContext) {
     // Works with HTTP, GraphQL, WebSocket, and RPC contexts
-    const request = extractRequestFromExecutionContext(context);
+    const request = await extractRequestFromExecutionContext(context);
 
     const ip = request.ip;
     const user = request.user;

@@ -21,7 +21,7 @@ import type { FastifyRequest } from 'fastify';
  * - Testing guard logic
  *
  * @param context - NestJS execution context (from guard, interceptor, or filter)
- * @returns Fastify request with headers, body, and session data
+ * @returns Promise that resolves to Fastify request with headers, body, and session data
  *
  * @example
  * ```typescript
@@ -29,7 +29,7 @@ import type { FastifyRequest } from 'fastify';
  * @Injectable()
  * export class RateLimitGuard implements CanActivate {
  *   async canActivate(context: ExecutionContext) {
- *     const request = extractRequestFromExecutionContext(context);
+ *     const request = await extractRequestFromExecutionContext(context);
  *
  *     const ip = request.ip;
  *     const isAllowed = await this.rateLimiter.check(ip);
@@ -48,8 +48,8 @@ import type { FastifyRequest } from 'fastify';
  * // Custom logging interceptor
  * @Injectable()
  * export class AuthLogInterceptor implements NestInterceptor {
- *   intercept(context: ExecutionContext, next: CallHandler) {
- *     const request = extractRequestFromExecutionContext(context);
+ *   async intercept(context: ExecutionContext, next: CallHandler) {
+ *     const request = await extractRequestFromExecutionContext(context);
  *
  *     this.logger.log({
  *       userId: request.user?.id,
@@ -62,14 +62,15 @@ import type { FastifyRequest } from 'fastify';
  * }
  * ```
  */
-export function extractRequestFromExecutionContext(context: ExecutionContext): FastifyRequest {
+export async function extractRequestFromExecutionContext(
+	context: ExecutionContext,
+): Promise<FastifyRequest> {
 	const contextType = context.getType<GqlContextType>();
 
 	if (contextType === 'graphql') {
 		// Dynamic import to make @nestjs/graphql optional
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-require-imports
-			const { GqlExecutionContext } = require('@nestjs/graphql');
+			const { GqlExecutionContext } = await import('@nestjs/graphql');
 			const gqlContext = GqlExecutionContext.create(context).getContext();
 			return (gqlContext as { req: FastifyRequest }).req;
 		} catch {

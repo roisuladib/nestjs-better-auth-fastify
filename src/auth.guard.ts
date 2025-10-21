@@ -106,7 +106,7 @@ export class AuthGuard implements CanActivate {
 	 * @throws {APIError} UNAUTHORIZED when auth required but session missing
 	 */
 	async canActivate(context: ExecutionContext): Promise<boolean> {
-		const request = extractRequestFromExecutionContext(context);
+		const request = await extractRequestFromExecutionContext(context);
 
 		// Check if route is marked as public (early return to avoid unnecessary session call)
 		const isPublic = this.reflector.getAllAndOverride(Public, [
